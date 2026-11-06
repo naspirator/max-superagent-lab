@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Syntax check
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ci-results
+          files="$(git ls-files '*.js' '*.mjs' '*.cjs' || true)"
+          if [ -n "$files" ]; then
+            for file in $files; do
+              echo "node --check $file"
+              node --check "$file"
+            done
+            echo "Syntax check passed" | tee ci-results/syntax.log
+          else
+            echo "No JavaScript files to check" | tee ci-results/syntax.log
+          fi
+
+      - name: Run tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ci-results
+          if [ -f package.json ] && node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts.test ? 0 : 1)"; then
+            npm test 2>&1 | tee ci-results/test.log
+          else
+            echo "No package.json test script; tests skipped." | tee ci-results/test.log
+          fi
+
+      - name: Upload CI results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-results
+          path: ci-results/
+          if-no-files-found: ignore
