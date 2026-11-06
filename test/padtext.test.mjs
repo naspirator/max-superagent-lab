@@ -27,3 +27,15 @@ test('throws TypeError for a non-numeric width', () => {
   assert.throws(() => padText('abc', null), TypeError);
   assert.throws(() => padText('abc'), TypeError);
 });
+
+test('throws TypeError for NaN and Infinity widths', () => {
+  assert.throws(() => padText('abc', NaN), TypeError);
+  assert.throws(() => padText('abc', Infinity), TypeError);
+  assert.throws(() => padText('abc', -Infinity), TypeError);
+});
+
+test('truncates a fractional width like String#padEnd', () => {
+  assert.equal(padText('abc', 5.9), 'abc  ');
+  assert.equal(padText('abc', 4.1), 'abc ');
+  assert.equal(padText('abc', 3.9), 'abc');
+});
