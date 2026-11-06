@@ -1,0 +1,9 @@
+{
+  "name": "max-superagent-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Testing AI agents and autonomous development",
+  "scripts": {
+    "test": "node --test"
+  }
+}
