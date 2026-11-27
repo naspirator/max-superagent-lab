@@ -51,6 +51,8 @@ class FakeQuery:
 class FakeTextMessage:
     def __init__(self, uid):
         self.from_user = SimpleNamespace(id=uid)
+        self.chat = SimpleNamespace(type="private")
+        self.text = "привет"
         self.answers = []
 
     async def answer(self, text, **kwargs):
@@ -112,6 +114,34 @@ def test_first_install_is_not_recovered(tmp_path):
     assert store.recovered is False
     handlers = ModeHandlers(store, client=None, admin_id=1)
     assert handlers.is_test(1) is False
+
+
+def test_recovered_mode_blocks_sync_text_and_photo(tmp_path):
+    root = tmp_path / "test-mode"
+    store = ModeStore(root)
+    store.initialize()
+    store.set_setting("mode:1", "TEST")
+    (root / "test_finance.db").unlink()
+    for marker in (root / "active").glob("*"):
+        marker.unlink()
+
+    # Перезапуск бота после потери БД: initialize() создаёт пустую базу.
+    again = ModeStore(root)
+    again.initialize()
+    handlers = ModeHandlers(again, client=None, admin_id=1)
+
+    sync = FakeTextMessage(1)
+    asyncio.run(handlers.cmd_blocked(sync))
+    assert sync.answers and "отключена" in sync.answers[0]
+
+    text = FakeTextMessage(1)
+    asyncio.run(handlers.on_text(text))
+    assert text.answers and "потеряна" in text.answers[0]
+
+    photo = FakeTextMessage(3)
+    handled = asyncio.run(handlers.handle_photo(photo, None, None))
+    assert handled is True
+    assert photo.answers and "НЕ отправлена" in photo.answers[0]
 
 
 def test_unavailable_mode_blocks_free_text_for_test_user(tmp_path):

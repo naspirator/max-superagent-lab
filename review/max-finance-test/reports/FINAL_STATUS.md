@@ -15,7 +15,7 @@
 - Линия по SHA фото, словарь П/Р/R/В/V/Т/Д/Л/ДИМ, база подтверждённых
   примеров, backup/restore.
 - Fail-closed изоляция TEST, блокировка `/sync` и рабочих callback.
-- 102 теста нового режима + 7 baseline, 0 failures.
+- 103 теста нового режима + 7 baseline, 0 failures.
   `reports/tests-round2.txt`, `reports/baseline-round2.txt`.
 - Независимая проверка ChatGPT Desktop: три цикла. Цикл 1 — **REVISE**
   (8 BLOCKER, 19 MAJOR). Цикл 2 — **REVISE** (B01, B03, B04 и др.). Цикл 3 —
@@ -68,7 +68,7 @@
    OCR, обязательное фото в `verify_backup`, путь к фото в Undo после
    `restore`.
 
-Итог: **102 теста + 7 baseline, 0 failures.** Независимой проверки этих
+Итог: **103 теста + 7 baseline, 0 failures.** Независимой проверки этих
 изменений по-прежнему нет.
 
 ## Не готово / блокеры
