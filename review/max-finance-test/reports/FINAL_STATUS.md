@@ -119,6 +119,7 @@
 - Метрики: `reports/evaluation.json`
 - Тесты: `reports/tests-round2.txt`, `reports/baseline-round2.txt`
 - Проверка установщика: `reports/installer-simulation.txt`
+- Вердикт 4-го цикла: `reports/chatgpt-review-cycle4-verdict.txt`
 - Как запустить Superagent: `reports/SUPERAGENT_TRIGGER.md`
 - Откат: `staging/docs/ROLLBACK.md`
 - PR: https://github.com/naspirator/max-superagent-lab/pull/38

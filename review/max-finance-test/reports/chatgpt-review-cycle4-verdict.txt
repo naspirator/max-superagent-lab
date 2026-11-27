@@ -1,0 +1,31 @@
+# Вердикт ChatGPT, цикл 4
+
+Получен от пользователя вручную 27.11.2026 после проверки PR #38 (HEAD 5fd4eab).
+
+Текст без изменений:
+
+```text
+VERDICT: REVISE — PR #38, HEAD 5fd4eab. Блокер B01 воспроизведён: при потере
+тестовой БД и отсутствии маркера пользователя /sync и свободный текст доходят
+до рабочего обработчика. Все 107 штатных тестов прошли.
+```
+
+Что сделано после вердикта (коммиты 9273ae2, ae744c4):
+
+- при первой установке пишется `test-mode/installed`;
+- если БД исчезла при существующем `installed`, `ModeStore.initialize()` ставит
+  `meta.recovered=1`;
+- `is_test`, `cmd_blocked`, `on_text`, `handle_photo` блокируют команды, фото и
+  свободный текст при `recovered`;
+- при первой установке (маркера `installed` нет) рабочий режим не блокируется;
+- добавлены тесты `test_recreated_db_after_marker_loss_fails_closed`,
+  `test_first_install_is_not_recovered`,
+  `test_recovered_mode_blocks_sync_text_and_photo`;
+- итог: 103 теста нового режима + 7 baseline, 0 failures.
+
+Пятый цикл (точечная проверка B01) **не отправлен**: в момент запуска активным
+окном была Autodesk Fusion, Windows заблокировал передачу фокуса
+(`SetForegroundWindow` → False), поэтому текст не попал в ChatGPT. Промпт
+готов: `reports/chatgpt-cycle5-ask.txt`.
+
+APPROVE по-прежнему нет.
