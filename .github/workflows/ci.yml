@@ -55,3 +55,52 @@ jobs:
           name: ci-results
           path: ci-results/
           if-no-files-found: ignore
+
+  maxfinance-test:
+    name: maxfinance-test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: review/max-finance-test/staging
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ci-results
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt 2>&1 | tee ci-results/pip.log
+
+      - name: Test suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pytest tests tests_baseline -q 2>&1 | tee ci-results/pytest.log
+
+      - name: Negative control
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/verify_regression_catches_settings_bug.py 2>&1 | tee ci-results/negative-control.log
+
+      - name: Installer simulation
+        shell: bash
+        run: |
+          set -euo pipefail
+          sh deploy/tests/simulate-install.sh 2>&1 | tee ci-results/installer.log
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maxfinance-ci-results
+          path: review/max-finance-test/staging/ci-results/
+          if-no-files-found: ignore

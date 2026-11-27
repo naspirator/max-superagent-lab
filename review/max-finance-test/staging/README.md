@@ -12,7 +12,7 @@ Google-таблица не используются.
   (`import`, вызов `handle_photo`, включение router в `main`).
 - `finance_v3.py`, `ocr_v3.py`, `reports.py`, `sheets_v3.py` — копии текущих
   рабочих модулей без изменений (для diff и тестов).
-- `tests/` — 103 теста нового режима и изоляции.
+- `tests/` — 112 тестов нового режима и изоляции.
 - `tests_baseline/` — 7 характеризационных тестов действующего кода.
 - `tools/` — проверка API, линий, резервной копии, сравнение OCR, макет UI.
 - `deploy/` — скрипты резервного копирования, установки после согласования и
@@ -20,10 +20,14 @@ Google-таблица не используются.
 
 ## Запуск тестов
 
-```powershell
-E:\MAX-FINANCE-TEST\.venv\Scripts\python.exe -m pytest -q
-E:\MAX-FINANCE-TEST\.venv\Scripts\python.exe -m pytest tests_baseline -q
+```bash
+python -m pip install -r requirements.txt
+python -m pytest tests tests_baseline -q
+python tools/verify_regression_catches_settings_bug.py
 ```
+
+То же выполняет job `maxfinance-test` в `.github/workflows/ci.yml`:
+чистое окружение Ubuntu, зависимости из PyPI.
 
 ## Проверка на реальных фото
 
