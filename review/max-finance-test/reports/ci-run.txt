@@ -1,4 +1,4 @@
-﻿CI: независимый прогон пакета MAX FINANCE TEST в чистом окружении
+CI: независимый прогон пакета MAX FINANCE TEST в чистом окружении
 ==================================================================
 
 Run:    https://github.com/naspirator/max-superagent-lab/actions/runs/46059242077
@@ -51,6 +51,9 @@ ALL INSTALLER SIMULATION CHECKS PASSED
 | 46063302889 | 4c83891 | success |
 | 46063583571 | 5d16fac | success |
 | 46063621288 | 4daa9bf | success |
+| 46063895279 | 95a74cf | success |
 
-Прогон на самом этом коммите — на вкладке Actions (тот же код и набор).
+Каждый следующий прогон запускался после docs-коммита, поэтому коммит этого
+файла по определению новее последней строки таблицы: прогон на нём — на вкладке
+Actions (тот же код и тот же набор тестов).
 Адрес для сверки: https://github.com/naspirator/max-superagent-lab/actions
