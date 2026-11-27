@@ -73,6 +73,10 @@ def merge_amounts(report: Report, old_positions) -> tuple[Report, int]:
         # на положительную сумму.
         if any(sign == "-" for sign in item.signs):
             continue
+        # Минус мог быть записан как terms=["-500"] при signs=["+"]:
+        # старый OCR не умеет минус, поэтому такую позицию не трогаем.
+        if any(term < 0 for term in item.terms):
+            continue
         position = _best_old(item, old_positions)
         if position is None or id(position) in used:
             continue

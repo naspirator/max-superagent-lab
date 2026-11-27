@@ -18,6 +18,8 @@ import io
 
 import re
 
+import sqlite3
+
 from datetime import date, datetime, timedelta, timezone
 
 from pathlib import Path
@@ -166,16 +168,17 @@ class ModeHandlers:
         return self.store.root / "active" / str(int(uid))
 
     def _mark_mode(self, uid: int, mode: str) -> None:
-        folder = self.store.root / "active"
-        folder.mkdir(parents=True, exist_ok=True)
-        path = self._mode_file(uid)
-        if mode == "TEST":
-            path.write_text("TEST", encoding="utf-8")
-        elif path.exists():
-            path.unlink()
+        self.store._write_mode_marker(uid, mode)
 
     def is_test(self, user_id: int) -> bool:
-        return self.store.setting(f"mode:{int(user_id)}", "WORK") == "TEST"
+        # Маркер вне БД главнее: он переживает пересоздание/потерю SQLite.
+        if self.store.is_test_marked(user_id):
+            return True
+        try:
+            return self.store.setting(f"mode:{int(user_id)}", "WORK") == "TEST"
+        except sqlite3.Error:
+            # База недоступна: не рискуем отправить фото в рабочий режим.
+            return True
 
 
 
@@ -672,7 +675,7 @@ class ModeHandlers:
 
             return
 
-        if action == "staff":
+        if action == "staff" and not args:
 
             await self._send(query, ui.staff_text(self.store), ui.staff_keyboard(self.store, self._nonce(uid)))
 
@@ -1831,20 +1834,23 @@ def _int(args: list[str], position: int, default: int) -> int:
 
 
 def _item_index(report: Report, value) -> int:
-
     if value is None:
-
         raise ReportError("Позиция не найдена")
-
     text = str(value)
-
+    # Сначала ищем настоящий item_id: он может состоять только из цифр
+    # (token_hex иногда даёт numeric-only строку), и тогда int(text)
+    # ошибочно трактует его как индекс.
     try:
-
-        return int(text)
-
-    except ValueError:
-
         return report.index_of(text)
+    except ReportError:
+        pass
+    try:
+        index = int(text)
+    except ValueError as exc:
+        raise ReportError("Позиция больше не существует — обнови список") from exc
+    if not 0 <= index < len(report.items):
+        raise ReportError("Позиция больше не существует — обнови список")
+    return index
 
 
 

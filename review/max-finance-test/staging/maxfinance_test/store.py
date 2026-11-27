@@ -221,7 +221,9 @@ class ModeStore:
             db.execute("INSERT OR REPLACE INTO settings(key,value) VALUES ('defaults_initialized','1')")
 
     def add_employee(self, name: str) -> int:
-        book = self.alias_book()
+        # Новый id считается по ВСЕМ сотрудникам, включая деактивированных:
+        # иначе INSERT упирается в UNIQUE(id) после удаления последнего.
+        book = self.alias_book(active_only=False)
         new_id = book.add_employee(name)
         with closing(self.connect()) as db, db:
             db.execute("INSERT INTO staff(id,name,active) VALUES (?,?,1)", (new_id, book.staff[new_id]))
@@ -280,6 +282,23 @@ class ModeStore:
                 "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
                 (key, str(value)),
             )
+        # Режим пользователя дублируется вне SQLite. Если база тестового
+        # режима исчезнет/пересоздастся, маркер не даст молча вернуть
+        # пользователя в рабочий режим.
+        if key.startswith("mode:") and key.split(":", 1)[1].isdigit():
+            self._write_mode_marker(int(key.split(":", 1)[1]), str(value))
+
+    def _write_mode_marker(self, user_id: int, mode: str) -> None:
+        folder = self.root / "active"
+        path = folder / str(int(user_id))
+        if mode == "TEST":
+            folder.mkdir(parents=True, exist_ok=True)
+            path.write_text("TEST", encoding="utf-8")
+        elif path.exists():
+            path.unlink()
+
+    def is_test_marked(self, user_id: int) -> bool:
+        return (self.root / "active" / str(int(user_id))).is_file()
 
     def save_line(self, photo_sha: str, boundary: tuple[float, float]) -> None:
         if not photo_sha:
