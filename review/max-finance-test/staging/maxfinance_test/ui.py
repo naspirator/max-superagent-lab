@@ -95,9 +95,13 @@ def items_text(report: Report, page: int, book: AliasBook, store=None) -> str:
     if totals["expenses"]:
         lines.append(f"Расходы: {format_amount(totals['expenses'])} ₽")
     if totals["debts"]:
-        lines.append(f"Долги: {format_amount(totals['debts'])} ₽")
+        lines.append(f"Долги: {format_amount(totals['debts'])} ₽ — {totals['debt_note']}")
     if report.warnings:
         lines.extend(["", "⚠️ " + " | ".join(report.warnings)[:600]])
+    if not report.ocr_complete:
+        lines.append("⚠️ Полнота чтения не подтверждена. Сверь фото и нажми «Я сверил фото».")
+    if report.ocr_stale:
+        lines.append("⚠️ Линия изменена после распознавания. Распознай заново.")
     lines.extend(["", "Нажми позицию, чтобы изменить любые данные."])
     return "\n".join(lines)[:3900]
 
@@ -109,7 +113,7 @@ def items_keyboard(report: Report, page: int, nonce: str) -> InlineKeyboardMarku
     for index in range(start, end):
         item = report.items[index]
         prefix = "⚠️ " if item.uncertain else ""
-        rows.append([button(f"{prefix}{index + 1}. {item.display()[:52]}", cbd(nonce, f"item:{index}"))])
+        rows.append([button(f"{prefix}{index + 1}. {item.display()[:52]}", cbd(nonce, f"item:{item.item_id}"))])
     nav = []
     if page > 0:
         nav.append(button("◀️", cbd(nonce, f"page:{page - 1}")))
@@ -117,9 +121,11 @@ def items_keyboard(report: Report, page: int, nonce: str) -> InlineKeyboardMarku
         nav.append(button("▶️", cbd(nonce, f"page:{page + 1}")))
     if nav:
         rows.append(nav)
+    if not report.ocr_complete:
+        rows.append([button("📷 Я сверил фото", cbd(nonce, "ackphoto"))])
     rows.extend([
         [button("➕ Добавить позицию", cbd(nonce, "add")), button("Σ Итоги", cbd(nonce, "totals"))],
-        [button("📅 Дата", cbd(nonce, "date")), button("✂️ Линия", cbd(nonce, "line"))],
+        [button("📅 Дата", cbd(nonce, "date")), button("✂️ Линия", cbd(nonce, "lineedit"))],
         [button("🔁 Распознать заново", cbd(nonce, "rerun"))],
         [button("↩️ Отменить действие", cbd(nonce, "undo")), button("✅ Проверить", cbd(nonce, "review"))],
         [button("❌ Отменить отчёт", cbd(nonce, "cancel")), button("🏠 Меню", cbd(nonce, "menu"))],
@@ -156,14 +162,15 @@ def item_text(report: Report, index: int, book: AliasBook) -> str:
 
 def item_keyboard(report: Report, index: int, nonce: str) -> InlineKeyboardMarkup:
     item = report.items[index]
+    key = item.item_id
     rows = [
-        [button("💰 Сумма/выражение", cbd(nonce, f"amount:{index}"))],
-        [button("🔢 Слагаемые и знаки", cbd(nonce, f"terms:{index}"))],
-        [button("👤 Сотрудник", cbd(nonce, f"employee:{index}")), button("🔤 Буква", cbd(nonce, f"alias:{index}"))],
-        [button("🏷 Категория", cbd(nonce, f"category:{index}")), button("💳 Источник", cbd(nonce, f"source:{index}"))],
-        [button("✂️ Разделить", cbd(nonce, f"split:{index}")), button("🔗 Объединить", cbd(nonce, f"merge:{index}"))],
-        [button("⬆️ Выше", cbd(nonce, f"up:{index}")), button("⬇️ Ниже", cbd(nonce, f"down:{index}"))],
-        [button("🗑 Удалить", cbd(nonce, f"delete:{index}"))],
+        [button("💰 Сумма/выражение", cbd(nonce, f"amount:{key}"))],
+        [button("🔢 Слагаемые и знаки", cbd(nonce, f"terms:{key}"))],
+        [button("👤 Сотрудник", cbd(nonce, f"employee:{key}")), button("🔤 Буква", cbd(nonce, f"alias:{key}"))],
+        [button("🏷 Категория", cbd(nonce, f"category:{key}")), button("💳 Источник", cbd(nonce, f"source:{key}"))],
+        [button("✂️ Разделить", cbd(nonce, f"split:{key}")), button("🔗 Объединить", cbd(nonce, f"merge:{key}"))],
+        [button("⬆️ Выше", cbd(nonce, f"up:{key}")), button("⬇️ Ниже", cbd(nonce, f"down:{key}"))],
+        [button("🗑 Удалить", cbd(nonce, f"delete:{key}"))],
         [button("↩️ К списку", cbd(nonce, f"page:{index // PAGE_SIZE}"))],
     ]
     return keyboard(rows)
@@ -180,74 +187,78 @@ def terms_text(report: Report, index: int) -> str:
 
 def terms_keyboard(report: Report, index: int, nonce: str) -> InlineKeyboardMarkup:
     item = report.items[index]
-    rows = [[button(f"{n + 1}. {s} {format_amount(t)}", cbd(nonce, f"term:{index}:{n}"))]
+    key = item.item_id
+    rows = [[button(f"{n + 1}. {s} {format_amount(t)}", cbd(nonce, f"term:{key}:{n}"))]
             for n, (t, s) in enumerate(zip(item.terms, item.signs))]
-    rows.append([button("➕ Добавить слагаемое", cbd(nonce, f"addterm:{index}"))])
-    rows.append([button("↩️ Назад", cbd(nonce, f"item:{index}"))])
+    rows.append([button("➕ Добавить слагаемое", cbd(nonce, f"addterm:{key}"))])
+    rows.append([button("↩️ Назад", cbd(nonce, f"item:{key}"))])
     return keyboard(rows)
 
 
-def term_keyboard(index: int, term: int, nonce: str) -> InlineKeyboardMarkup:
+def term_keyboard(item_id: str, term: int, nonce: str) -> InlineKeyboardMarkup:
     return keyboard([
-        [button("✏️ Изменить число", cbd(nonce, f"termvalue:{index}:{term}"))],
-        [button("➕ Сделать плюсом", cbd(nonce, f"signplus:{index}:{term}")),
-         button("➖ Сделать минусом", cbd(nonce, f"signminus:{index}:{term}"))],
-        [button("🗑 Удалить слагаемое", cbd(nonce, f"termdel:{index}:{term}"))],
-        [button("↩️ Назад", cbd(nonce, f"terms:{index}"))],
+        [button("✏️ Изменить число", cbd(nonce, f"termvalue:{item_id}:{term}"))],
+        [button("➕ Сделать плюсом", cbd(nonce, f"signplus:{item_id}:{term}")),
+         button("➖ Сделать минусом", cbd(nonce, f"signminus:{item_id}:{term}"))],
+        [button("🗑 Удалить слагаемое", cbd(nonce, f"termdel:{item_id}:{term}"))],
+        [button("↩️ Назад", cbd(nonce, f"terms:{item_id}"))],
     ])
 
 
-def employees_keyboard(book: AliasBook, index: int, nonce: str, page: int = 0) -> InlineKeyboardMarkup:
+def employees_keyboard(book: AliasBook, item_id: str, nonce: str, page: int = 0) -> InlineKeyboardMarkup:
     people = book.staff_options()
     start = page * EMPLOYEE_PAGE
     rows = []
     for employee_id, name in people[start:start + EMPLOYEE_PAGE]:
         aliases = ", ".join(book.aliases_for(employee_id)[:6])
         label = name + (f" ({aliases})" if aliases else "")
-        rows.append([button(label, cbd(nonce, f"setemp:{index}:{employee_id}"))])
+        rows.append([button(label, cbd(nonce, f"setemp:{item_id}:{employee_id}"))])
     nav = []
     if page > 0:
-        nav.append(button("◀️", cbd(nonce, f"emppage:{index}:{page - 1}")))
+        nav.append(button("◀️", cbd(nonce, f"emppage:{item_id}:{page - 1}")))
     if start + EMPLOYEE_PAGE < len(people):
-        nav.append(button("▶️", cbd(nonce, f"emppage:{index}:{page + 1}")))
+        nav.append(button("▶️", cbd(nonce, f"emppage:{item_id}:{page + 1}")))
     if nav:
         rows.append(nav)
-    rows.append([button("🚫 Без сотрудника", cbd(nonce, f"setemp:{index}:0"))])
-    rows.append([button("↩️ Назад", cbd(nonce, f"item:{index}"))])
+    rows.append([button("🚫 Без сотрудника", cbd(nonce, f"setemp:{item_id}:0"))])
+    rows.append([button("↩️ Назад", cbd(nonce, f"item:{item_id}"))])
     return keyboard(rows)
 
 
-def categories_keyboard(index: int, nonce: str) -> InlineKeyboardMarkup:
-    rows = [[button(CATEGORY_LABELS[c], cbd(nonce, f"setcat:{index}:{c}"))] for c in CATEGORIES]
-    rows.append([button("↩️ Назад", cbd(nonce, f"item:{index}"))])
+def categories_keyboard(item_id: str, nonce: str) -> InlineKeyboardMarkup:
+    rows = [[button(CATEGORY_LABELS[c], cbd(nonce, f"setcat:{item_id}:{c}"))] for c in CATEGORIES]
+    rows.append([button("↩️ Назад", cbd(nonce, f"item:{item_id}"))])
     return keyboard(rows)
 
 
-def sources_keyboard(index: int, nonce: str) -> InlineKeyboardMarkup:
-    rows = [[button(SOURCE_LABELS[s], cbd(nonce, f"setsrc:{index}:{s}"))] for s in SOURCES]
-    rows.append([button("↩️ Назад", cbd(nonce, f"item:{index}"))])
+def sources_keyboard(item_id: str, nonce: str) -> InlineKeyboardMarkup:
+    rows = [[button(SOURCE_LABELS[s], cbd(nonce, f"setsrc:{item_id}:{s}"))] for s in SOURCES]
+    rows.append([button("↩️ Назад", cbd(nonce, f"item:{item_id}"))])
     return keyboard(rows)
 
 
 def split_keyboard(report: Report, index: int, nonce: str) -> InlineKeyboardMarkup:
     item = report.items[index]
+    key = item.item_id
     rows = [[button(f"После слагаемого {n + 1} ({format_amount(item.terms[n])})",
-                    cbd(nonce, f"splitat:{index}:{n + 1}"))] for n in range(len(item.terms) - 1)]
+                    cbd(nonce, f"splitat:{key}:{n + 1}"))] for n in range(len(item.terms) - 1)]
     if len(item.terms) == 1:
-        rows.append([button("Разделить на две суммы", cbd(nonce, f"splitamount:{index}"))])
-    rows.append([button("↩️ Назад", cbd(nonce, f"item:{index}"))])
+        rows.append([button("Разделить на две суммы", cbd(nonce, f"splitamount:{key}"))])
+    rows.append([button("↩️ Назад", cbd(nonce, f"item:{key}"))])
     return keyboard(rows)
 
 
 def merge_keyboard(report: Report, index: int, nonce: str, book: AliasBook) -> InlineKeyboardMarkup:
+    item = report.items[index]
     rows = []
-    for other, item in enumerate(report.items):
+    for other, candidate in enumerate(report.items):
         if other == index:
             continue
-        rows.append([button(f"{other + 1}. {item.display()[:40]}", cbd(nonce, f"mergeat:{index}:{other}"))])
+        rows.append([button(f"{other + 1}. {candidate.display()[:40]}",
+                            cbd(nonce, f"mergeat:{item.item_id}:{candidate.item_id}"))])
         if len(rows) >= 10:
             break
-    rows.append([button("↩️ Назад", cbd(nonce, f"item:{index}"))])
+    rows.append([button("↩️ Назад", cbd(nonce, f"item:{item.item_id}"))])
     return keyboard(rows)
 
 

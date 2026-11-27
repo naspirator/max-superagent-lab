@@ -227,7 +227,15 @@ async def manual_sync(message:Message):
         await message.answer('Не удалось обновить Google. Локальная база сохранена; повтори /sync.')
 
 async def process_photo(message,bot,file):
-    if TEST_HANDLERS is not None and await TEST_HANDLERS.handle_photo(message,bot,file):return
+    if TEST_HANDLERS is not None:
+        try:
+            if await TEST_HANDLERS.handle_photo(message,bot,file):return
+        except Exception:
+            if TEST_HANDLERS.is_test(message.from_user.id):
+                await message.answer('⛔ Тестовый режим недоступен. Фото не отправлено в рабочий режим.')
+                return
+            raise
+        if TEST_HANDLERS.is_test(message.from_user.id):return
     if not allowed(message):return
     uid=message.from_user.id
     if uid in busy or uid in drafts:
@@ -590,7 +598,7 @@ async def main():
         TEST_HANDLERS=maxfinance_test.create_test_handlers(BASE,DATABASE,SHEET_ID,client,ADMIN_ID)
         dp.include_router(TEST_HANDLERS.router)
     except Exception as exc:
-        TEST_HANDLERS=None
+        TEST_HANDLERS=maxfinance_test.UnavailableTestMode(BASE)
         print('TEST_MODE_INIT_ERROR:',repr(exc),flush=True)
     dp.include_router(reports_router);dp.include_router(router)
     try:await dp.start_polling(bot)

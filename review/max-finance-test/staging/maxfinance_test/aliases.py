@@ -144,7 +144,7 @@ class AliasBook:
             if len(key) >= 2 and normalize_alias(name).startswith(key)
         ]
         if len(prefix) == 1:
-            return Resolution("resolved", prefix[0], self.staff[prefix[0]], key)
+            return Resolution("candidate", None, self.staff[prefix[0]], key, tuple(prefix))
         if len(prefix) > 1:
             return Resolution("ambiguous", None, None, key, tuple(sorted(prefix)))
         return Resolution("unknown", None, None, key)

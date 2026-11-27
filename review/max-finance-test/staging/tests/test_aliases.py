@@ -28,7 +28,8 @@ def test_full_names_and_partial_handwriting():
     b = book()
     assert b.resolve("Пет").employee_name == "ПЕТ"
     assert b.resolve("Рос").employee_name == "РОС"
-    assert b.resolve("Вл").employee_name == "ВЛА"
+    # Частичное написание — кандидат, а не автоматическое назначение.
+    assert b.resolve("Вл").status == "candidate"
     assert b.resolve("Дим").employee_name == "ДИМ"
     assert b.resolve("П?").employee_name == "ПЕТ"
 

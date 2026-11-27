@@ -131,6 +131,9 @@ class Report:
     created_at: str = ""
     nonce: str = field(default_factory=new_id)
     ocr_snapshot: dict[str, Any] | None = None
+    ocr_complete: bool = True
+    ocr_stale: bool = False
+    debt_policy: str = "separate"
 
     # ---------- служебное ----------
 
@@ -155,12 +158,16 @@ class Report:
     def undo(self) -> None:
         if not self.history:
             raise ReportError("Отменять больше нечего")
+        version = self.version
+        menu_id = self.message_id
         data = json.loads(self.history.pop())
         current_history = list(self.history)
         restored = Report.from_json(data)
         self.__dict__.update(restored.__dict__)
         self.history = current_history
-        self.version = max(1, self.version)
+        # Ревизия только растёт; идентификатор меню не должен откатываться.
+        self.version = version + 1
+        self.message_id = menu_id
 
     # ---------- сериализация ----------
 
@@ -178,6 +185,9 @@ class Report:
             "created_at": self.created_at,
             "nonce": self.nonce,
             "ocr_snapshot": self.ocr_snapshot,
+            "ocr_complete": self.ocr_complete,
+            "ocr_stale": self.ocr_stale,
+            "debt_policy": self.debt_policy,
         }
         if include_history:
             data["history"] = list(self.history)
@@ -202,6 +212,9 @@ class Report:
             created_at=str(data.get("created_at", "")),
             nonce=str(data.get("nonce") or new_id()),
             ocr_snapshot=data.get("ocr_snapshot"),
+            ocr_complete=bool(data.get("ocr_complete", True)),
+            ocr_stale=bool(data.get("ocr_stale", False)),
+            debt_policy=str(data.get("debt_policy", "separate")),
         )
         return report
 
@@ -267,6 +280,13 @@ class Report:
             "employee_total": sum((x["amount"] for x in employees), Decimal("0")),
             "expenses": self.category_sum("expense"),
             "debts": self.category_sum("debt"),
+            "debt_policy": self.debt_policy,
+            "debt_note": (
+                "Долги учитываются отдельной строкой, как в действующем v3; "
+                "автоматически из безнала не вычитаются"
+                if self.debt_policy == "separate" else
+                "Долги вычитаются из безнала согласно выбранному правилу"
+            ),
         }
 
     def employee_remaining(self) -> Decimal:
@@ -276,13 +296,17 @@ class Report:
 
     # ---------- проверка ----------
 
-    def validate(self) -> bool:
+    def validate(self, employee_ids: set[int] | None = None) -> bool:
         try:
             selected = date.fromisoformat(self.report_date)
         except (TypeError, ValueError) as exc:
             raise ReportError("Неверная дата отчёта") from exc
         if selected > date.today():
             raise ReportError("Дата в будущем")
+        if not self.ocr_complete:
+            raise ReportError("Сверьте фотографию и подтвердите полноту отчёта")
+        if self.ocr_stale:
+            raise ReportError("Линия изменена после распознавания — распознайте заново или подтвердите результат")
         if not self.items:
             raise ReportError("Добавьте хотя бы одну позицию")
         if len(self.items) > 200:
@@ -304,11 +328,13 @@ class Report:
             if item.category == "employee":
                 if item.employee_id is None:
                     raise ReportError(f"Позиция {number}: выберите сотрудника")
-                if item.source not in SOURCES:
-                    raise ReportError(f"Позиция {number}: выберите источник выплаты")
+                if employee_ids is not None and item.employee_id not in employee_ids:
+                    raise ReportError(f"Позиция {number}: сотрудник не найден среди активных")
+                if item.source not in ("beznal", "nal"):
+                    raise ReportError(f"Позиция {number}: выберите безнал или наличные")
                 if item.amount < 0:
                     raise ReportError(f"Позиция {number}: отрицательная выплата сотруднику")
-        for category in ("beznal", "nal"):
+        for category in HEADER_CATEGORIES:
             if category in self.manual_totals:
                 parse_amount(self.manual_totals[category])
         return True
@@ -340,7 +366,10 @@ class Report:
         new_terms[term_index] = parse_amount(value)
         self._push_history()
         item.terms = new_terms
-        item.raw = " ".join(decimal_text(t) for t in new_terms)
+        item.raw = " ".join(
+            (("−" if s == "-" else "+") if i else ("−" if s == "-" else "")) + decimal_text(t)
+            for i, (t, s) in enumerate(zip(new_terms, item.signs))
+        )
         item.uncertain = False
         item.origin = "manual"
 
@@ -361,8 +390,9 @@ class Report:
         item = self._item(index)
         if sign not in ("+", "-"):
             raise ReportError("Неверный знак")
+        number = parse_amount(value)
         self._push_history()
-        item.terms.append(parse_amount(value))
+        item.terms.append(number)
         item.signs.append(sign)
         item.uncertain = False
         item.origin = "manual"
@@ -439,10 +469,10 @@ class Report:
         self._push_history()
         left = Item(terms=list(item.terms[:at_term]), signs=list(item.signs[:at_term]), raw=item.raw,
                     category=item.category, employee_id=item.employee_id, alias=item.alias,
-                    source=item.source, uncertain=item.uncertain, origin="manual")
+                    source=item.source, uncertain=item.uncertain, struck=item.struck, origin="manual")
         right = Item(terms=list(item.terms[at_term:]), signs=list(item.signs[at_term:]), raw=item.raw,
                      category=item.category, employee_id=item.employee_id, alias=item.alias,
-                     source=item.source, uncertain=item.uncertain, origin="manual")
+                     source=item.source, uncertain=item.uncertain, struck=item.struck, origin="manual")
         self.items[index:index + 1] = [left, right]
         return index, index + 1
 
@@ -464,6 +494,7 @@ class Report:
             alias=first.alias if first.alias == second.alias else "",
             source=source,
             uncertain=first.uncertain or second.uncertain or category is None,
+            struck=first.struck or second.struck,
             origin="manual",
             note=(first.note + " " + second.note).strip()[:300],
         )
@@ -503,6 +534,12 @@ class Report:
             raise ReportError("Позиция не найдена")
         return self.items[index]
 
+    def index_of(self, item_id: str) -> int:
+        for index, item in enumerate(self.items):
+            if item.item_id == item_id:
+                return index
+        raise ReportError("Позиция больше не существует — обнови список")
+
 
 def _item_signature(item: Item) -> tuple[str, str, str, str]:
     return (
@@ -522,10 +559,18 @@ def classify_errors(original: Report, corrected: Report) -> list[str]:
         errors.append("line_changed")
     old_by_id = {item.item_id: item for item in original.items}
     new_by_id = {item.item_id: item for item in corrected.items}
-    if set(new_by_id) - set(old_by_id):
+    only_new = set(new_by_id) - set(old_by_id)
+    only_old = set(old_by_id) - set(new_by_id)
+    split = len(corrected.items) > len(original.items) and bool(only_old)
+    merged = len(corrected.items) < len(original.items) and bool(only_new)
+    if only_new and not split and not merged:
         errors.append("item_added")
-    if set(old_by_id) - set(new_by_id):
+    if only_old and not split and not merged:
         errors.append("item_deleted")
+    if split:
+        errors.append("item_split")
+    if merged:
+        errors.append("item_merged")
     for item_id in set(old_by_id) & set(new_by_id):
         old, new = old_by_id[item_id], new_by_id[item_id]
         if [decimal_text(t) for t in old.terms] != [decimal_text(t) for t in new.terms]:

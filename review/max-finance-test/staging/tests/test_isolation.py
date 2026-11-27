@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from maxfinance_test.handlers import ModeHandlers
+from maxfinance_test.integration import UnavailableTestMode
 from maxfinance_test.model import Item, Report
 from maxfinance_test.store import IsolationError, ModeStore
 
@@ -107,6 +108,19 @@ async def test_confirm_writes_only_to_test_store(tmp_path):
     assert len(store.examples()) == 1
     assert store.load_draft(1) is None
     assert not any("Google" in x and "не отправлено" not in x for x in query.message.answers)
+
+
+@pytest.mark.asyncio
+async def test_unavailable_test_mode_fails_closed(tmp_path):
+    root = tmp_path / "test-mode"
+    store = ModeStore(root)
+    store.initialize()
+    store.set_setting("mode:1", "TEST")
+    guard = UnavailableTestMode(tmp_path)
+    message = FakeMessage()
+    handled = await guard.handle_photo(message, None, None)
+    assert handled is True
+    assert any("НЕ отправлена" in text for text in message.answers)
 
 
 @pytest.mark.asyncio

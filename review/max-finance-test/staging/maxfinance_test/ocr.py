@@ -135,12 +135,9 @@ def parse_response(content: str, book: AliasBook) -> Report:
     try:
         data = json.loads(text, object_pairs_hook=_unique_pairs)
     except (json.JSONDecodeError, ValueError) as exc:
-        try:
-            from json_repair import repair_json
-            repaired = repair_json(text, return_objects=False)
-            data = json.loads(repaired, object_pairs_hook=_unique_pairs)
-        except Exception:
-            raise OcrError("Ответ модели не является корректным JSON") from exc
+        # Никакого автоматического "ремонта" JSON: он может скрыть
+        # повторяющиеся ключи и подменить значения.
+        raise OcrError("Ответ модели не является корректным JSON") from exc
     if not isinstance(data, dict) or not isinstance(data.get("items"), list):
         raise OcrError("В ответе нет списка записей")
     if len(data["items"]) > 200:
@@ -173,11 +170,15 @@ def parse_response(content: str, book: AliasBook) -> Report:
             warnings.append(f"Запись {number}: неясные числа ({exc})")
             continue
         # В рукописных отчётах дефис после метки — разделитель («Б/Н-16100»,
-        # «П-4500»), а не минус. Отрицательное одиночное денежное значение
-        # здесь не встречается; знак вычитания возможен только в выражении
-        # из нескольких слагаемых.
+        # «П-4500»), а не минус. Но одиночное отрицательное число без метки
+        # остаётся отрицательным: это может быть реальная корректировка.
         if len(norm_terms) == 1 and norm_signs[0] == "-":
-            norm_signs[0] = "+"
+            raw_text = str(row.get("raw") or "")
+            if re.match(r"^\s*[0-9A-Za-zА-Яа-яЁё/?.]+\s*[-−–—]\s*\d", raw_text):
+                norm_signs[0] = "+"
+            else:
+                uncertain = True
+                warnings.append(f"Запись {number}: отрицательная сумма — подтвердите знак")
         kind = str(row.get("kind") or "unknown").strip().lower()
         category = KIND_TO_CATEGORY.get(kind)
         column = str(row.get("column") or "unknown").strip().lower()
@@ -246,6 +247,7 @@ def parse_response(content: str, book: AliasBook) -> Report:
         report.items.append(item)
     if data.get("complete") is not True:
         warnings.append("Полнота чтения не подтверждена — сверьте фотографию")
+    report.ocr_complete = data.get("complete") is True
     infer_sources(report)
     if not report.items:
         warnings.append("Записи не найдены. Добавьте позиции вручную.")
@@ -383,14 +385,23 @@ def infer_sources(report: Report) -> None:
     if bez_y is None or nal_y is None or bez_y >= nal_y:
         return
     for item in report.items:
-        if item.category != "employee":
+        if item.category != "employee" or item.source not in (None, "unknown"):
+            continue
+        if not item.bbox:
             continue
         y = _center_y(item)
         if y is None:
             continue
-        inferred = "beznal" if y < nal_y else "nal"
-        if item.source != inferred:
-            item.source = inferred
+        header = bez if y < nal_y else nal
+        hb = header.bbox
+        if not hb:
+            continue
+        overlap = max(0.0, min(item.bbox[2], hb[2]) - max(item.bbox[0], hb[0]))
+        width = max(1e-6, min(item.bbox[2] - item.bbox[0], hb[2] - hb[0]))
+        if overlap / width < 0.25:
+            # Столбцы не совпадают: вертикальная эвристика недостаточна.
+            continue
+        item.source = "beznal" if y < nal_y else "nal"
 
 
 __all__ = [

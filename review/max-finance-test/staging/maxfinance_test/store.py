@@ -58,6 +58,12 @@ class ModeStore:
             raise IsolationError("Тестовая база не может совпадать с рабочей")
         if self.prod_db and self.prod_db.parent == self.root:
             raise IsolationError("Тестовое хранилище не может лежать в папке рабочего проекта")
+        if self.prod_db and self.db_path.exists() and self.prod_db.exists():
+            try:
+                if os.path.samefile(self.db_path, self.prod_db):
+                    raise IsolationError("Тестовая база является ссылкой на рабочую")
+            except OSError:
+                pass
         if prod_sheet_id and test_sheet_id and prod_sheet_id == test_sheet_id:
             raise IsolationError("Тестовая Google-таблица не может совпадать с рабочей")
         self.root.mkdir(parents=True, exist_ok=True)
@@ -108,8 +114,20 @@ class ModeStore:
             db.execute("INSERT OR IGNORE INTO meta VALUES ('engine_version', 'test-ocr-1.0')")
             db.execute("INSERT OR IGNORE INTO meta VALUES ('created_at', ?)", (_now(),))
             db.execute("INSERT OR IGNORE INTO settings VALUES ('mode', 'WORK')")
-        if self.prod_db and self.prod_db.is_file():
+            try:
+                db.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_examples_photo ON examples(photo_sha)")
+            except sqlite3.IntegrityError:
+                pass
+            try:
+                db.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_examples_photo_date ON examples(photo_sha, report_date)")
+            except sqlite3.IntegrityError:
+                pass
+        seed_done = self.setting("seed_done")
+        if self.prod_db and self.prod_db.is_file() and seed_done != "1":
             self.seed_from_production(self.prod_db)
+            self.set_setting("seed_done", "1")
+        elif not self.prod_db and self.setting("defaults_initialized") != "1":
+            self._ensure_defaults()
 
     # ---------- сотрудники и словарь ----------
 
@@ -125,14 +143,15 @@ class ModeStore:
         with closing(self.connect()) as db:
             return {row["alias"]: row["staff_id"] for row in db.execute("SELECT alias,staff_id FROM staff_alias")}
 
-    def alias_book(self) -> AliasBook:
-        return AliasBook(self.staff(active_only=False), self.aliases())
+    def alias_book(self, active_only: bool = True) -> AliasBook:
+        return AliasBook(self.staff(active_only=active_only), self.aliases())
 
     def seed_from_production(self, prod_db: Path) -> None:
         """Скопировать действующих сотрудников и их историю обозначений.
 
-        Ничего не переименовывает и не объединяет: при конфликте обозначение
-        остаётся за прежним сотрудником, конфликт записывается для владельца.
+        Идентификаторы TEST не переиспользуются: сотрудник сопоставляется по
+        имени, а не по числовому id. При конфликте обозначение остаётся за
+        прежним сотрудником TEST, конфликт записывается для владельца.
         """
         prod_db = Path(prod_db).resolve()
         if prod_db == self.db_path:
@@ -142,24 +161,37 @@ class ModeStore:
             staff = [dict(row) for row in source.execute("SELECT id,name,active FROM staff_v3 ORDER BY id")]
             aliases = [dict(row) for row in source.execute("SELECT alias,staff_id FROM staff_alias_v3")]
         if not staff:
+            self._ensure_defaults()
             return
         with closing(self.connect()) as db, db:
-            known = {row["id"] for row in db.execute("SELECT id FROM staff")}
+            by_name = {row["name"]: row["id"] for row in db.execute("SELECT id,name FROM staff")}
+            mapping: dict[int, int] = {}
             for person in staff:
-                if person["id"] in known:
+                name = str(person["name"]).strip().upper()
+                if name in by_name:
+                    mapping[int(person["id"])] = int(by_name[name])
                     continue
-                db.execute(
-                    "INSERT INTO staff(id,name,active) VALUES (?,?,?)",
-                    (person["id"], person["name"], int(person.get("active", 1))),
+                cursor = db.execute(
+                    "INSERT INTO staff(name,active) VALUES (?,?)",
+                    (name, int(person.get("active", 1))),
                 )
+                mapping[int(person["id"])] = int(cursor.lastrowid)
+                by_name[name] = int(cursor.lastrowid)
+            existing = {row["alias"]: row["staff_id"] for row in db.execute("SELECT alias,staff_id FROM staff_alias")}
             for alias in aliases:
-                try:
-                    db.execute(
-                        "INSERT OR IGNORE INTO staff_alias(alias,staff_id) VALUES (?,?)",
-                        (alias["alias"], alias["staff_id"]),
-                    )
-                except sqlite3.IntegrityError:
+                target = mapping.get(int(alias["staff_id"]))
+                if target is None:
                     continue
+                key = str(alias["alias"])
+                current = existing.get(key)
+                if current is None:
+                    db.execute("INSERT OR IGNORE INTO staff_alias(alias,staff_id) VALUES (?,?)", (key, target))
+                    existing[key] = target
+                elif int(current) != int(target):
+                    db.execute(
+                        "INSERT OR IGNORE INTO seed_conflicts(alias,wanted,existing,created_at) VALUES (?,?,?,?)",
+                        (key, str(target), str(current), _now()),
+                    )
         self._ensure_defaults()
 
     def _ensure_defaults(self) -> None:
@@ -186,6 +218,7 @@ class ModeStore:
             # Полное имя — тоже обозначение, если оно ещё не занято.
             for name, staff_id in by_name.items():
                 db.execute("INSERT OR IGNORE INTO staff_alias(alias,staff_id) VALUES (?,?)", (name, staff_id))
+            db.execute("INSERT OR REPLACE INTO settings(key,value) VALUES ('defaults_initialized','1')")
 
     def add_employee(self, name: str) -> int:
         book = self.alias_book()
@@ -299,7 +332,7 @@ class ModeStore:
     def record_confirmed(self, report: Report, original: Report | None, photo_bytes: bytes,
                          user_id: int, split: str = "train") -> int:
         """Сохранить подтверждённый пример. Только после validate()."""
-        report.validate()
+        report.validate({p["id"] for p in self.staff()})
         if split not in ("train", "holdout"):
             raise ValueError("Неизвестная часть выборки")
         if not photo_bytes:
@@ -320,12 +353,15 @@ class ModeStore:
         original_json = json.dumps(original.to_json() if original else {}, ensure_ascii=False)
         confirmed_json = json.dumps(report.to_json(), ensure_ascii=False)
         with closing(self.connect()) as db, db:
-            cursor = db.execute(
-                "INSERT INTO examples(photo_sha,photo_path,source_file,report_date,original_json,"
-                "confirmed_json,error_types,engine_version,split,confirmed_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                (photo_sha, path.name, report.photo_path, report.report_date, original_json,
-                 confirmed_json, json.dumps(error_types), report.engine_version, split, _now()),
-            )
+            try:
+                cursor = db.execute(
+                    "INSERT INTO examples(photo_sha,photo_path,source_file,report_date,original_json,"
+                    "confirmed_json,error_types,engine_version,split,confirmed_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                    (photo_sha, path.name, report.photo_path, report.report_date, original_json,
+                     confirmed_json, json.dumps(error_types), report.engine_version, split, _now()),
+                )
+            except sqlite3.IntegrityError as exc:
+                raise ValueError("Этот тестовый отчёт уже подтверждён — дубль не создаётся") from exc
             example_id = cursor.lastrowid
             db.execute(
                 "INSERT INTO audit(user_id,action,detail,created_at) VALUES (?,?,?,?)",
@@ -376,6 +412,8 @@ class ModeStore:
         photos = dest / "confirmed"
         if self.photos_dir.is_dir():
             shutil.copytree(self.photos_dir, photos)
+        if self.input_dir.is_dir():
+            shutil.copytree(self.input_dir, dest / "input")
         manifest = {
             "created_at": _now(),
             "schema_version": SCHEMA_VERSION,
@@ -394,6 +432,8 @@ class ModeStore:
         if not manifest_path.is_file():
             raise ValueError("Нет manifest.json")
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if not (source / TEST_DB_NAME).is_file():
+            raise ValueError("В резервной копии нет тестовой базы")
         for name, expected in manifest.get("files", {}).items():
             path = source / name
             if not path.is_file() or _sha256_file(path) != expected:
@@ -411,9 +451,20 @@ class ModeStore:
         shutil.copy2(source / TEST_DB_NAME, dest / TEST_DB_NAME)
         if (source / "confirmed").is_dir():
             shutil.copytree(source / "confirmed", dest / "confirmed")
+        if (source / "input").is_dir():
+            shutil.copytree(source / "input", dest / "input")
         with closing(sqlite3.connect(dest / TEST_DB_NAME)) as db:
             if db.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                 raise ValueError("Восстановленная база повреждена")
+            # Абсолютные пути к исходным фото старых черновиков заменяются на
+            # новую директорию; имена файлов сохраняются.
+            for (user_id, payload) in db.execute("SELECT user_id,payload FROM drafts").fetchall():
+                data = json.loads(payload)
+                old_path = data.get("photo_path")
+                if old_path:
+                    data["photo_path"] = str(dest / "input" / Path(old_path).name)
+                    db.execute("UPDATE drafts SET payload=? WHERE user_id=?", (json.dumps(data, ensure_ascii=False), user_id))
+            db.commit()
         store = cls(dest)
         store.initialize()
         return store

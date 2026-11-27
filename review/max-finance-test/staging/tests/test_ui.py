@@ -53,7 +53,7 @@ def test_items_text_and_keyboard_cover_every_action(env):
     assert "Безнал" in text and "Наличные" in text
     markup = ui.items_keyboard(report, 0, report.nonce)
     datas = [b.callback_data for row in markup.inline_keyboard for b in row]
-    for action in ("add", "totals", "date", "line", "rerun", "undo", "review", "cancel"):
+    for action in ("add", "totals", "date", "lineedit", "rerun", "undo", "review", "cancel"):
         assert any(d.endswith(":" + action) for d in datas), action
     assert all(len(d.encode()) <= 64 for d in datas)
 
@@ -71,7 +71,7 @@ def test_terms_and_signs_keyboard(env):
     report = Report("2026-11-27", items=[Item([Decimal("6000"), Decimal("1450")], ["+", "+"])])
     markup = ui.terms_keyboard(report, 0, report.nonce)
     datas = [b.callback_data for row in markup.inline_keyboard for b in row]
-    assert any(":term:0:0" in d for d in datas)
+    assert any(":term:" in d and d.endswith(":0") for d in datas)
     assert any("addterm" in d for d in datas)
     term_markup = ui.term_keyboard(0, 1, report.nonce)
     term_datas = [b.callback_data for row in term_markup.inline_keyboard for b in row]
@@ -153,7 +153,7 @@ async def test_text_amount_edit_flow(env):
     report = sample_report()
     store.save_draft(1, report)
     handlers = ModeHandlers(store, client=None, admin_id=1)
-    handlers.editing[1] = ("amount", 0)
+    handlers.editing[1] = ("amount", report.items[0].item_id)
     message = FakeMessage("11000+1500")
     await handlers.on_text(message)
     loaded = store.load_draft(1)
@@ -176,6 +176,27 @@ async def test_callback_category_and_undo(env):
     await handlers.on_callback(undo)
     loaded = store.load_draft(1)
     assert loaded.items[3].category == "expense"
+
+
+@pytest.mark.asyncio
+async def test_callback_uses_item_id_and_rejects_deleted_item(env):
+    store = env
+    store.set_setting("mode:1", "TEST")
+    report = sample_report()
+    store.save_draft(1, report)
+    handlers = ModeHandlers(store, client=None, admin_id=1)
+    item_id = report.items[0].item_id
+    query = FakeQuery(f"tt:{report.nonce}:setcat:{item_id}:debt")
+    await handlers.on_callback(query)
+    loaded = store.load_draft(1)
+    index = loaded.index_of(item_id)
+    assert loaded.items[index].category == "debt"
+
+    delete = FakeQuery(f"tt:{report.nonce}:delete:{item_id}")
+    await handlers.on_callback(delete)
+    old = FakeQuery(f"tt:{report.nonce}:item:{item_id}")
+    await handlers.on_callback(old)
+    assert any("не существует" in answer[0] for answer in old.message.answers)
 
 
 @pytest.mark.asyncio

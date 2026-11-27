@@ -1,4 +1,5 @@
 import json
+import os
 import sqlite3
 from decimal import Decimal
 from pathlib import Path
@@ -67,7 +68,7 @@ def test_conflicting_alias_is_not_silently_merged(tmp_path):
     store.initialize()
     with store.connect() as db, db:
         db.execute("UPDATE staff_alias SET staff_id=3 WHERE alias='П'")
-    store.initialize()
+    store.seed_from_production(prod)
     assert store.alias_book().resolve("П").employee_id == 3
     assert store.seed_conflicts()
 
@@ -105,6 +106,54 @@ def test_duplicate_confirmation_is_rejected(env):
     with pytest.raises(ValueError):
         store.record_confirmed(report, None, b"same-photo", 1)
     assert len(store.examples()) == 1
+
+
+def test_seed_does_not_reuse_id_of_another_person(tmp_path):
+    prod = tmp_path / "prod" / "finance.db"
+    prod.parent.mkdir()
+    make_prod(prod)
+    root = tmp_path / "test"
+    store = ModeStore(root, prod_db=prod)
+    store.initialize()
+    # Подменяем id=1 на другого человека и сбрасываем флаг импорта.
+    with store.connect() as db, db:
+        db.execute("UPDATE staff SET name='ЧУЖОЙ' WHERE id=1")
+        db.execute("DELETE FROM settings WHERE key='seed_done'")
+    store.initialize()
+    names = {p["name"] for p in store.staff(active_only=False)}
+    assert "ПЕТ" in names
+    assert store.seed_conflicts()
+    assert store.alias_book().employee_name(1) != "ПЕТ"
+
+
+def test_test_db_hardlink_to_prod_is_rejected(tmp_path):
+    prod = tmp_path / "prod" / "finance.db"
+    prod.parent.mkdir()
+    make_prod(prod)
+    root = tmp_path / "test"
+    root.mkdir()
+    try:
+        os.link(prod, root / "test_finance.db")
+    except (OSError, NotImplementedError):
+        pytest.skip("hardlink not supported")
+    with pytest.raises(Exception):
+        ModeStore(root, prod_db=prod)
+
+
+def test_backup_includes_input_photos(env, tmp_path):
+    store, _ = env
+    image = store.input_dir / "photo.img"
+    image.write_bytes(b"photo")
+    backup = store.backup(tmp_path / "backup-input")
+    assert (backup / "input" / "photo.img").is_file()
+
+
+def test_removed_alias_is_not_restored_on_restart(env, tmp_path):
+    store, _ = env
+    store.remove_alias("П")
+    again = ModeStore(store.root)
+    again.initialize()
+    assert again.alias_book().resolve("П").status != "resolved"
 
 
 def test_holdout_never_used_for_few_shot(env):

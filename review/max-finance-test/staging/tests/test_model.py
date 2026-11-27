@@ -133,6 +133,74 @@ def test_itog_not_required_and_not_auto_zero():
     assert "itog" not in report.totals()["categories"]
 
 
+def test_ocr_incomplete_and_stale_block_confirmation():
+    report = Report("2026-11-27", items=[item([1000], category="nal")], ocr_complete=False)
+    with pytest.raises(ReportError):
+        report.validate()
+    report.ocr_complete = True
+    report.ocr_stale = True
+    with pytest.raises(ReportError):
+        report.validate()
+
+
+def test_unknown_source_is_not_allowed():
+    report = Report("2026-11-27", items=[item([1000], category="employee", employee_id=1, source="unknown")])
+    with pytest.raises(ReportError):
+        report.validate()
+
+
+def test_employee_must_exist_among_active():
+    report = Report("2026-11-27", items=[item([1000], category="employee", employee_id=99, source="nal")])
+    with pytest.raises(ReportError):
+        report.validate({1, 2})
+
+
+def test_undo_keeps_monotonic_revision_and_menu_id():
+    report = Report("2026-11-27", items=[item([1000], category="nal")], version=7)
+    report.message_id = 123
+    report.set_term(0, 0, "1200")
+    before = report.version
+    report.undo()
+    assert report.version > before
+    assert report.message_id == 123
+    assert report.items[0].amount == Decimal("1000")
+
+
+def test_split_and_merge_keep_struck_flag():
+    report = Report("2026-11-27", items=[item([1000, 200], category="ignore", struck=True)])
+    left, right = report.split_item(0, 1)
+    assert report.items[left].struck is True
+    assert report.items[right].struck is True
+    merged = report.merge_items(left, right)
+    assert report.items[merged].struck is True
+
+
+def test_negative_single_amount_remains_negative_by_default():
+    report = Report("2026-11-27", items=[item([-500], category="debt")])
+    assert report.items[0].amount == Decimal("-500")
+
+
+def test_debts_are_separate_and_not_silently_deducted():
+    report = Report("2026-11-27", items=[
+        item([12000], category="beznal"),
+        item([1000], category="debt"),
+    ])
+    totals = report.totals()
+    assert totals["categories"]["beznal"] == Decimal("12000")
+    assert totals["debts"] == Decimal("1000")
+    assert "не вычитаются" in totals["debt_note"]
+
+
+def test_classify_split_not_added_deleted():
+    original = Report("2026-11-27", items=[item([1000, 200], category="nal")])
+    corrected = Report.from_json(original.to_json())
+    left, right = corrected.split_item(0, 1)
+    errors = classify_errors(original, corrected)
+    assert "item_split" in errors
+    assert "item_added" not in errors
+    assert "item_deleted" not in errors
+
+
 def test_classify_errors():
     original = Report("2026-11-27", items=[item([1000], category="nal")])
     corrected = Report.from_json(original.to_json())

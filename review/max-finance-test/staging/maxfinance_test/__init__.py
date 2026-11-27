@@ -5,12 +5,12 @@
 сотрудников и обозначений при первом создании тестового хранилища.
 """
 from .aliases import AliasBook, DEFAULT_ALIASES
-from .integration import create_test_handlers
+from .integration import UnavailableTestMode, create_test_handlers
 from .model import Item, Report
 from .ocr import ENGINE_VERSION
 from .store import IsolationError, ModeStore
 
 __all__ = [
     "AliasBook", "DEFAULT_ALIASES", "ENGINE_VERSION", "IsolationError", "Item",
-    "Report", "ModeStore", "create_test_handlers",
+    "Report", "ModeStore", "UnavailableTestMode", "create_test_handlers",
 ]

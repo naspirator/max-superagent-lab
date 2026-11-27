@@ -126,7 +126,7 @@ async def test_end_to_end_photo_edit_confirm_without_prod(monkeypatch, tmp_path)
     draft = store.load_draft(1)
     assert draft.items[0].category == "nal"
 
-    handlers.editing[1] = ("amount", 0)
+    handlers.editing[1] = ("amount", draft.items[0].item_id)
     text_message = FakeMessage()
     text_message.text = "30000+800"
     await handlers.on_text(text_message)
@@ -190,6 +190,27 @@ async def test_ocr_failure_keeps_draft_and_allows_manual(monkeypatch, tmp_path):
     assert loaded.items == []
     assert any("недоступен" in warning for warning in loaded.warnings)
     assert any("добавить позиции" in answer.lower() for answer in query.message.answers)
+
+
+@pytest.mark.asyncio
+async def test_line_change_after_ocr_blocks_confirmation(monkeypatch, tmp_path):
+    store = make_store(tmp_path)
+    handlers = ModeHandlers(store, client=None, admin_id=1)
+    image = tmp_path / "input.img"
+    from PIL import Image
+    buffer = io.BytesIO()
+    Image.new("RGB", (40, 40), "white").save(buffer, format="JPEG")
+    image.write_bytes(buffer.getvalue())
+    report = Report("2026-11-27", photo_sha="sha-stale", photo_path=str(image),
+                    boundary=(0.5, 0.5), version=1,
+                    items=[Item([Decimal("1000")], category="nal")])
+    store.save_draft(1, report)
+    query = FakeQuery(f"tt:{report.nonce}:line:-5")
+    await handlers.on_callback(query)
+    loaded = store.load_draft(1)
+    assert loaded.ocr_stale is True
+    with pytest.raises(Exception):
+        loaded.validate()
 
 
 def test_confirm_duplicate_is_rejected(tmp_path):
