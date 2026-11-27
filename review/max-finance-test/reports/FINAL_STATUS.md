@@ -141,7 +141,8 @@ SHA-256 совпадают с указанными выше, тестовых а
 - Промпт следующего цикла: `reports/chatgpt-cycle9-ask.txt`
 - Откат: `staging/docs/ROLLBACK.md`
 - PR: https://github.com/naspirator/max-superagent-lab/pull/38
-  (пакет `review-package-13.tar.gz`)
+  (ветка `review/max-finance-test-20261127`, HEAD `d7e9a3f`;
+  архивный снимок — `review-package-13.tar.gz` на `f5f28f1`)
 
 ## Следующий шаг
 
