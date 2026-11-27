@@ -109,6 +109,7 @@
 - Проверка установщика: `reports/installer-simulation.txt`
 - Откат: `staging/docs/ROLLBACK.md`
 - PR: https://github.com/naspirator/max-superagent-lab/pull/38
+  (HEAD `5feb2f6`; пакет `review-package-11.tar.gz`)
 
 ## Следующий шаг
 

@@ -93,9 +93,9 @@ ChatGPT и согласование владельца — отдельные э
 ## 4. Git diff, коммиты, PR
 
 - diff: `reports/changes.diff`
-- полный пакет для ревью: `review-package-3.tar.gz`
+- полный пакет для ревью: `review-package-11.tar.gz`
 - GitHub PR: https://github.com/naspirator/max-superagent-lab/pull/38
-  (ветка `review/max-finance-test-20261127`, коммит `a3b94a2`)
+  (ветка `review/max-finance-test-20261127`, коммит `5feb2f6`)
 - В PROD ничего не коммитилось и не merge-илось.
 
 ---
