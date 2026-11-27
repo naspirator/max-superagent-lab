@@ -22,6 +22,19 @@ from .model import Report, classify_errors
 
 TEST_DB_NAME = "test_finance.db"
 SCHEMA_VERSION = 1
+# Полный набор таблиц схемы версии 1. Отсутствие любой из них означает, что
+# база не «пустая», а повреждённая или восстановленная частично.
+REQUIRED_TABLES = (
+    "meta",
+    "staff",
+    "staff_alias",
+    "seed_conflicts",
+    "settings",
+    "drafts",
+    "line_settings",
+    "examples",
+    "audit",
+)
 
 
 class IsolationError(RuntimeError):
@@ -94,9 +107,13 @@ class ModeStore:
             return False
         try:
             with closing(sqlite3.connect(f"file:{self.db_path}?mode=ro", uri=True)) as db:
-                if not db.execute(
-                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='meta'"
-                ).fetchone():
+                present = {
+                    row[0]
+                    for row in db.execute(
+                        "SELECT name FROM sqlite_master WHERE type='table'"
+                    )
+                }
+                if not set(REQUIRED_TABLES).issubset(present):
                     return False
                 return db.execute(
                     "SELECT 1 FROM meta WHERE key='schema_version'"

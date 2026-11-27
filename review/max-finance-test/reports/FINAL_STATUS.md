@@ -1,6 +1,6 @@
 # MAX FINANCE TEST — текущий статус
 
-Дата: 27.11.2026, 22:20 MSK.
+Дата: 27.11.2026, 22:35 MSK.
 
 ## Готово
 
@@ -14,68 +14,63 @@
   буква, категория, источник, add/delete/split/merge/order/date/line/rerun/undo.
 - Линия по SHA фото, словарь П/Р/R/В/V/Т/Д/Л/ДИМ, база подтверждённых
   примеров, backup/restore.
-- Fail-closed изоляция TEST: при потере/повреждении тестовой БД блокируются
-  команды, фото и свободный текст.
-- **108 тестов нового режима + 7 baseline, 0 failures.**
+- Fail-closed изоляция TEST: при потере, повреждении или неполной схеме
+  тестовой БД блокируются команды, фото и свободный текст.
+- **111 тестов нового режима + 7 baseline, 0 failures.**
   `reports/tests-at-head.txt`.
-- Независимая проверка ChatGPT Desktop: пять циклов, все — **REVISE**.
-  Транскрипты: `reports/chatgpt-review-full.txt`,
-  `reports/chatgpt-review-cycle3.txt`, `reports/chatgpt-review-cycle4.txt`,
-  `reports/chatgpt-review-cycle5-ui.txt`; вердикты:
-  `reports/chatgpt-review-cycle4-verdict.txt`,
-  `reports/chatgpt-review-cycle5-verdict.txt`.
+- Независимая проверка ChatGPT Desktop: шесть циклов, все — **REVISE**.
+  Транскрипты и вердикты: `reports/chatgpt-review-*.txt`.
 
-### Вердикты по циклам
+## Вердикты по циклам
 
 1. Цикл 1 — 8 BLOCKER, 19 MAJOR.
 2. Цикл 2 — B01, B03, B04 и др.
-3. Цикл 3 — OCR −500→+500, B01 при отсутствии файла тестовой БД, ошибка
-   установщика; MAJOR: сброс «Я сверил фото», подтверждение старой сводкой,
-   restore/verify.
+3. Цикл 3 — OCR −500→+500, B01 при отсутствии файла БД, ошибка установщика;
+   MAJOR: сброс «Я сверил фото», подтверждение старой сводкой, restore/verify.
 4. Цикл 4 (HEAD 5fd4eab) — B01: потеря БД вместе с маркером возвращала
    пользователя в WORK.
-5. Цикл 5 (HEAD c536711) — два новых B01:
-   - **BLOCKER:** пустой (0 байт) файл `test_finance.db` считался живой базой:
-     `initialize()` создавал таблицы, `recovered` оставался `False`, и после
-     перезапуска `/sync`, текст и фото доходили до WORK через диспетчер
-     aiogram. Пустой файл появляется сам при обычном `sqlite3.connect` после
-     потери БД.
-   - **MAJOR:** `restore()` возвращал хранилище, пропускающее WORK при
-     `meta.recovered=1`: `backup`/`restore` не переносили файл `installed`,
-     первый `initialize()` писал маркер и не читал флаг из БД.
+5. Цикл 5 (HEAD c536711) — B01: пустой (0 байт) файл `test_finance.db`
+   считался живой базой; MAJOR: `restore()` не переносил `installed`.
+6. Цикл 6 (HEAD ccee903) — B01: неполная схема БД (таблица `settings`
+   потеряна, `meta` жива) возвращала в WORK; MAJOR: новые тесты вызывали
+   обработчики напрямую, минуя диспетчер aiogram.
 
-### Исправлено после цикла 5 (раунд 3)
+## Исправлено после цикла 6 (раунд 4)
 
-1. `ModeStore._has_schema()` — до создания таблиц проверяется реальная схема
-   (`meta` и `schema_version`). Файл 0 байт, пустой или повреждённый не
-   считается базой: при существующем `installed` ставится `meta.recovered=1`.
-2. `backup` и `restore` переносят файл `installed`.
-3. При первой установке `initialize()` читает `meta.recovered` из уже
-   существующей БД — восстановленная копия не теряет fail-closed.
-4. Добавлены тесты: пустой файл после потери БД, первая установка с пустым
-   файлом, повреждённый файл, `recovered` через `backup`/`restore`, здоровое
-   восстановление.
+1. `REQUIRED_TABLES` — `_has_schema()` требует все девять таблиц схемы v1
+   (`meta`, `staff`, `staff_alias`, `seed_conflicts`, `settings`, `drafts`,
+   `line_settings`, `examples`, `audit`). Отсутствие любой при существующем
+   `installed` включает `meta.recovered=1`.
+2. `tests/test_dispatch_isolation.py` — обновления проходят через настоящий
+   `Dispatcher.feed_update` и `Bot` с сессией без сети:
+   - потеря БД и пустой файл → `/sync`, текст и фото не доходят до WORK;
+   - `meta` жива, `settings` удалена → блокировка;
+   - обычный пользователь без маркера → все три обновления доходят до WORK.
+3. В тест `backup`/`restore` добавлена проверка свободного текста.
 
-Итог: **108 + 7 baseline, 0 failures.** Шестой цикл (проверка этих двух
-исправлений) ещё не проводился.
+Итог: **111 + 7 baseline, 0 failures.** Седьмой цикл (проверка исправлений
+раунда 4) ещё не проводился; APPROVE нет.
 
-### Ранее исправлено (раунды 1–2)
+## Исправлено ранее (раунды 1–3)
 
 - Установщик: откат только кода (без живой БД), привязка к `$PROJECT`,
   два замера PID вместо одного `sv status`, `$PREFIX/bin/sv`, проверка
   `sha256sum -c`, атомарная замена, откат только кода при сбое. Проверено
   dry-run на телефоне и симуляцией семи сценариев
   (`reports/installer-simulation.txt`).
-- `active/` переносится `backup`/`restore`.
+- `installed` пишется при первой установке; если БД исчезла, пуста или её
+  схема неполная — `meta.recovered=1`, рабочие операции блокируются.
+- `backup`/`restore` переносят `installed`; при первой установке
+  `initialize()` читает `meta.recovered` из существующей БД.
 - Регрессии: устаревшая сводка, завершение отчёта после сбоя OCR, обязательное
   фото в `verify_backup`, путь к фото в Undo после `restore`, числовой
   `item_id`, карточка сотрудника, ID после деактивации, знак в ансамбле.
 
 ## Не готово / блокеры
 
-1. **APPROVE ChatGPT не получен.** Пять циклов, последний вердикт — REVISE.
-   Два дефекта B01 исправлены, но шестой цикл не проводился. Без APPROVE
-   внедрение и отправка владельцу не выполнялись.
+1. **APPROVE ChatGPT не получен.** Шесть циклов, последний вердикт — REVISE.
+   Дефекты B01 и MAJOR раунда 4 исправлены, но седьмой цикл не проводился.
+   Без APPROVE внедрение и отправка владельцу не выполнялись.
 2. **Superagent-ревью не получено.** Причина подтверждена кодом и настройками:
    - источник пропускает self-authored элементы
      (`src/sources/github.ts:227`);
@@ -92,7 +87,7 @@
 
 ## PROD
 
-Не изменялся (проверено сейчас по SSH на телефон):
+Не изменялся (проверено по SSH на телефон):
 
 - служба `max-finance`: `run`, PID 20786;
 - `/root/max-finance-stage/bot.py`:
@@ -100,8 +95,7 @@
 - `/root/max-finance-stage/finance.db`:
   `438ECC57A92CDBA7541FC1D726F27D0FCBC865429A3872BA788A525D01BF7F06`;
   совпадает с резервной копией;
-- `maxfinance_test` и `test-mode` в PROD отсутствуют (`NO_TEST_PACKAGE`,
-  `NO_TEST_MODE`);
+- `maxfinance_test` и `test-mode` в PROD отсутствуют;
 - рабочая БД и Google-таблица не перезаписывались;
 - токен и сотрудники не менялись;
 - внедрение, merge и отправка владельцу не выполнялись.
@@ -115,15 +109,16 @@
 - Тесты: `reports/tests-at-head.txt`
 - Проверка установщика: `reports/installer-simulation.txt`
 - Вердикты: `reports/chatgpt-review-cycle4-verdict.txt`,
-  `reports/chatgpt-review-cycle5-verdict.txt`
-- Промпт следующего цикла: `reports/chatgpt-cycle6-ask.txt`
+  `reports/chatgpt-review-cycle5-verdict.txt`,
+  `reports/chatgpt-review-cycle6-verdict.txt`
+- Промпт следующего цикла: `reports/chatgpt-cycle7-ask.txt`
 - Откат: `staging/docs/ROLLBACK.md`
 - PR: https://github.com/naspirator/max-superagent-lab/pull/38
   (пакет `review-package-12.tar.gz`)
 
 ## Следующий шаг
 
-1. Провести шестой цикл ChatGPT по двум исправлениям B01.
+1. Провести седьмой цикл ChatGPT по исправлениям раунда 4.
 2. Для снятия блокера Superagent — новый Issue от `naspirator` (человек).
 3. При APPROVE — отправить владельцу отчёт с кнопками «Принять / Доработать /
    Полный отчёт / Пауза».

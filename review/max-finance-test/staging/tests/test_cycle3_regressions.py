@@ -340,6 +340,9 @@ def test_backup_restore_preserves_recovered_flag(tmp_path):
     photo = FakeTextMessage(3)
     assert asyncio.run(handlers.handle_photo(photo, None, None)) is True
     assert photo.answers and "НЕ отправлена" in photo.answers[0]
+    text = FakeTextMessage(1)
+    asyncio.run(handlers.on_text(text))
+    assert text.answers and "потеряна" in text.answers[0]
 
 
 def test_backup_restore_of_healthy_store_is_not_recovered(tmp_path):

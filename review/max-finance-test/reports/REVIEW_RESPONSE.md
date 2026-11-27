@@ -185,3 +185,21 @@ id никогда не переиспользуется для другого ч
 
 Итог: **108 + 7 baseline, 0 failures** (`reports/tests-at-head.txt`). Шестой
 цикл не проводился; APPROVE нет.
+
+## Цикл 6 — вердикт и исправления
+
+Цикл 6 (HEAD ccee903) дал **VERDICT: REVISE**:
+
+1. **BLOCKER — неполная схема БД.** `_has_schema()` проверял только `meta` и
+   `schema_version`; при потере таблицы `settings` `initialize()` создавал её
+   пустой и оставлял `recovered=False`. Исправлено: `REQUIRED_TABLES` — все
+   девять таблиц схемы v1; отсутствие любой при существующем `installed`
+   означает потерю базы и включает `meta.recovered=1`.
+2. **MAJOR — покрытие.** Добавлены интеграционные тесты через настоящий
+   диспетчер aiogram (`tests/test_dispatch_isolation.py`): три сценария —
+   потеря БД, потеря `settings` при живой `meta`, обычный рабочий пользователь.
+   В тест `backup`/`restore` добавлена проверка свободного текста.
+
+Итог: **111 + 7 baseline, 0 failures** (`reports/tests-at-head.txt`). Седьмой
+цикл не проводился; APPROVE нет.
+
