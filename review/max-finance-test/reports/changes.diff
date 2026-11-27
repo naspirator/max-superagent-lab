@@ -8,17 +8,7 @@
 ## Diff bot.py
 
 ```diff
-# MAX FINANCE TEST — изменения относительно действующего кода
-
-Ниже: полный diff `bot.py` (единственный изменённый рабочий файл) и манифест
-новых файлов тестового режима. Новые файлы не входят в diff PROD; они лежат
-в `staging/maxfinance_test/` и не импортируются рабочим кодом без строки
-`import maxfinance_test` в `bot.py`.
-
-## Diff bot.py
-
-```diff
-﻿diff --git a/prod-src/max-finance-stage/bot.py b/staging/bot.py
+diff --git a/prod-src/max-finance-stage/bot.py b/staging/bot.py
 index 73fbf2a..8ee470a 100644
 --- a/prod-src/max-finance-stage/bot.py
 +++ b/staging/bot.py
@@ -71,105 +61,6 @@ index 73fbf2a..8ee470a 100644
 +    dp.include_router(reports_router);dp.include_router(router)
      try:await dp.start_polling(bot)
      finally:await bot.session.close();await client.close()
-```
-
-## Новые файлы тестового режима
-
-| Файл | SHA-256 | Байт |
-|---|---:|---:|
-| `.pytest_cache/.gitignore` | `3ed731b65d06150c138e2dadb0be0697550888a6b47eb8c45ecc9adba8b8e9bd` | 37 |
-| `.pytest_cache/CACHEDIR.TAG` | `37dc88ef9a0abeddbe81053a6dd8fdfb13afb613045ea1eb4a5c815a74a3bde4` | 191 |
-| `.pytest_cache/README.md` | `73fd6fccdd802c419a6b2d983d6c3173b7da97558ac4b589edec2dfe443db9ad` | 302 |
-| `.pytest_cache/v/cache/lastfailed` | `44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a` | 2 |
-| `.pytest_cache/v/cache/nodeids` | `31850ef6adfa3b32885f17632498e7da93e746f31a1106f30e581ea9f7879094` | 6885 |
-| `bot.py` | `95a8de9f946bf621b90226eddf1ced87cce9e8b60ecd87d3fdb4bfae5ba88eb3` | 40331 |
-| `deploy/backup-production.sh` | `f0a329aad57959ec7cc8adba84a4374de369ac2a0b3e9e1902d4a75610f3a89a` | 1002 |
-| `deploy/install-test-mode.sh` | `6725d406bb72a856a560ac80e1df24c36d31df9734a38948ace9b654fb6b4f5f` | 1863 |
-| `deploy/rollback-production.sh` | `b4d289f6e2a26d974943104dcd594ab90e278d7c2abcbbf89c6ecb2f08bd5e27` | 2405 |
-| `docs/ARCHITECTURE.md` | `d8a0768865240a0b098cc631934e541bec0fbd3deff888f8769885a895f660f1` | 7993 |
-| `docs/ROLLBACK.md` | `8a791d60cafd2ef7f0ee51c840bf64c542ba059c9411100e954746df1d2394aa` | 4292 |
-| `finance_v3.py` | `59bdd3e8692aa5f7dc8e3dfd8d4f69c08f94cb2a1bf2b28fce525e9d10c72a5f` | 29606 |
-| `maxfinance_test/__init__.py` | `deed35601d91488d078105754c3cff6558baf357dbaf32f6d946eaadf87b0135` | 876 |
-| `maxfinance_test/aliases.py` | `f9f0e73443a6a4f4744dfcc752430833e4d1b1557190670922b2521ec720b4c3` | 6523 |
-| `maxfinance_test/ensemble.py` | `174995af8d15774c4e37dbb3749b30dc659241857553734e7973097f7d881338` | 5160 |
-| `maxfinance_test/handlers.py` | `079601a3464ae698e0ae4ca66ac62db54b62ffaab9fd10effab92c754a3f1440` | 50091 |
-| `maxfinance_test/integration.py` | `ed2e6f9d7882a1155a74ea38e013cd4a05c1ff6563481edbdbb4b1a31ae5626e` | 3994 |
-| `maxfinance_test/line.py` | `463186edb15ba3bd4284e3ac9f7b0ee834114cb4646f04c337410993f7228d2e` | 8370 |
-| `maxfinance_test/model.py` | `48b5cfff07f9eb01ccee1d432fcd04fda62ded70511f4d9a834bc9d664b1be08` | 26805 |
-| `maxfinance_test/money.py` | `738b742b31f6a6c757da9e7101ea9b5a3da8658ff41016bd87e3d1f8bf3e501a` | 5871 |
-| `maxfinance_test/ocr.py` | `c6c8e322031800bf91acaa218cccb43fb7ec438a92946c9e901272c3bf6072c1` | 20731 |
-| `maxfinance_test/store.py` | `596e7f3bbb89fe29fb74b933d62544738e3626d019b9aa20cf5603988ca427e7` | 28611 |
-| `maxfinance_test/training.py` | `e1c42369f0c350c5f36cc001495db053dc0811f5172333df838214ee39935522` | 3276 |
-| `maxfinance_test/ui.py` | `2392fa5110b9f68359494f560279cf243611f6b2c259a6cc45dccd353fc32d3e` | 19173 |
-| `ocr_v3.py` | `91be4a84f1c16565678cb5eae459d1b3c03aab51760024a814e1b516c9817d11` | 3048 |
-| `pytest.ini` | `bcca2004395dbab576fc6a8ecb213e31bc4ebdbe8529821c2e8d4306205e31b0` | 88 |
-| `README.md` | `8749d5df739413b50ce7437c8bedf030f57df1769aa2e7c4774015a138fdd6c2` | 2103 |
-| `reports.py` | `584b95663386ec32a301280be05cb3fe09c759a209f073acd07302d01531e660` | 4557 |
-| `requirements.txt` | `b4b44b41f8d2731f7548a75bd830d40c28401cdb635a21d28ce7efd4d1a99cec` | 141 |
-| `sheets_v3.py` | `2e4a514eaf347961e197637329dcab03063548acde98fba9eccab44905063341` | 10357 |
-| `tests/conftest.py` | `fb87a67f8b40e2301f7bced9304dc706daace7febf456172c99193c28d721a6c` | 150 |
-| `tests/test_aliases.py` | `72bc04a6c5dd2dc7d77979e0e3845a689bb06924239dac84f50a7f65d9ca433a` | 3077 |
-| `tests/test_cycle3_regressions.py` | `2c82fc5a702d5451c629d3e8a7ef4a6849cc98a41eb9a6e9b372bde4fa1b0a0b` | 4113 |
-| `tests/test_flow.py` | `da39886f5451dad63df50ecf56f7e7ca7ec14bc0126bbc5b14a73cfff9fe12b3` | 8537 |
-| `tests/test_isolation.py` | `d0f0a11344a76501702e004b2abdd90935440c7b2904acff4bcf2f7194f36059` | 5624 |
-| `tests/test_model.py` | `553f977177c334fb55440e536cf428edd732fa5f7dad365ac4b4150c338d4215` | 9129 |
-| `tests/test_ocr.py` | `907347e8fc43838a29e471ad6cf5cd4e0289b9dfc96c554d1bd104814819cca0` | 5164 |
-| `tests/test_store.py` | `8b505a8bd4467af69e4d15fac0ba1afcf3c82a0c478cc6e084b09b24f712cab4` | 7941 |
-| `tests/test_ui.py` | `7b002fff1043996d8ad339cc10022df98ed5be345c07e6ca63b0d41cde121386` | 7602 |
-| `tests_baseline/conftest.py` | `5248834bedb27c775834cd9084171b9a0e074d0528d1f51ac4142a6dcf9b18aa` | 164 |
-| `tests_baseline/test_baseline.py` | `4bf512043f04946774f8d641dab89923e2d33c757611f676f1419c984fa337f6` | 3069 |
-| `tools/chatgpt_attach_menu.ps1` | `651621af4efda69faf7beb1ad04c48a74980f11239c95ffc9fddc33749a21c30` | 1141 |
-| `tools/chatgpt_click_paste.ps1` | `1fb09f9ca830db5c5c8b0e504dcd0638d350a9fd6c4423dfe7f4ba60f6a02200` | 2047 |
-| `tools/chatgpt_click_send.ps1` | `ce29a2c3d213971295fd8863d76938c1ff27d548a13517803a887075d644cdab` | 2038 |
-| `tools/chatgpt_dump_text.ps1` | `53fe213926c2c213b34c9c0c432b1ec5056a843290d20bcf3ff53a75abeb7e3c` | 847 |
-| `tools/chatgpt_edits_list.ps1` | `111df2931e4757eb7e1148ca63d28a4a8d21410f74118ea1623546aa85e05f6f` | 911 |
-| `tools/chatgpt_enter.ps1` | `dcc567ef7b8889cbef5994b9a2b7ade27e06bf2262b5d3c13fda6ccfcaf24a81` | 1361 |
-| `tools/chatgpt_enter2.ps1` | `3e0bf5200343881301372ce3505c5a5bda7ce9be35087940768c3a51624e383d` | 531 |
-| `tools/chatgpt_esc.ps1` | `277c6e8790608ce70cfa7e327f3008a5c81104a06f398d1b5ed997f9759d15e5` | 507 |
-| `tools/chatgpt_file_menu.ps1` | `3ca4eaff2e42ef3450ae39fabf1302bf72a734c49cba37f948c110cfabc1a147` | 1203 |
-| `tools/chatgpt_find_check.ps1` | `ac126116c2749cfff798796116b73df86892070f233888e73873ec6b82263f15` | 807 |
-| `tools/chatgpt_flow.ps1` | `68adfbd7dee50922fba00d1734540b0155f7190c5e153d30951cf2cca48de505` | 3304 |
-| `tools/chatgpt_focus.ps1` | `ac97ba77946615c85375a5b9d68f0bae1c7197ac03f0a6480c1587ff8ba45ab8` | 573 |
-| `tools/chatgpt_newchat.ps1` | `fac7a1b21dde6d764bdb9b25731f15a09eb53d03bfcbcccb8e365824f417021e` | 912 |
-| `tools/chatgpt_newchat2.ps1` | `3962e94f7017f25b83ffc5c086e0524e6ef163d305dac7844e8cbd50db123061` | 1183 |
-| `tools/chatgpt_open_check.ps1` | `bfbcd2b48da59277a947bf7d84aa37fc19e80f51f09e18f7b7ed1183ab3072be` | 791 |
-| `tools/chatgpt_open_finance.ps1` | `e8397dd5b054fe51bd78e193b82162ead7df46c4c70afb5d268c1ddee8b9a420` | 1069 |
-| `tools/chatgpt_paste_file.ps1` | `04c4d07199770c000f935460d6a6e12c75bf61a87ccfd15e50fd83bb330f9401` | 1520 |
-| `tools/chatgpt_screenshot.ps1` | `c7eb3ace6a5d83c6032027fca862e058158f8e4f9411dc4ee983c55f364323af` | 1196 |
-| `tools/chatgpt_send.ps1` | `57205d0053ec3a8e5be964297ab325dfacc3aa5ac01fc82f012b64bfb6ff1323` | 3064 |
-| `tools/chatgpt_send2.ps1` | `28703b93d1b996cf0d4f115fbb77561f1bde11e7973e0062f365cc2e16615b31` | 3729 |
-| `tools/chatgpt_send3.ps1` | `368fec0cdba2d11f90946c532787cc434e54ac54a1974e0eeef2a355e9d16784` | 3258 |
-| `tools/chatgpt_send4.ps1` | `e64583561edb5d76770c1e226b9364814fe30c861066915c8fb5d60dfd07cfa0` | 3339 |
-| `tools/chatgpt_set_send.ps1` | `9004efc6e3e1077afb7edcc2fd68d150118ceb10551dae2e83bd5bbc8cf99949` | 1155 |
-| `tools/chatgpt_setvalue.ps1` | `3c3ce283397ad83854ea3e467737076d041a7fe8b2ad73bce3873311f8672779` | 910 |
-| `tools/chatgpt_submit.ps1` | `7ec1caa01096672b0636f7f5d244d40291c965ae187a9b1232875b09891e082a` | 3587 |
-| `tools/chatgpt_ui_dump.ps1` | `3afc71c5f9c78b3854d171aff397c7e09f1eda0c86e698ebbf5d5ce12989caea` | 941 |
-| `tools/chatgpt_ui_edits.ps1` | `778b8935826ce8ef497ed714279b27556333217887181d49aec79f3d12d0d93e` | 698 |
-| `tools/chatgpt_ui_state.ps1` | `94ff409b112e21e7f371832cb86c7cd2a2aa6a7d81b9dd2b64da678ee9825846` | 1105 |
-| `tools/chatgpt_windows.ps1` | `cd8fb9d9229df7f03a33afe771fac3444869651400df4a691aa8e580de8ffc16` | 1582 |
-| `tools/check_bot_alive.py` | `22a70c3911a7d994443cc353b0bac2c553623d2b2bcd4fb67804be5bffccb173` | 523 |
-| `tools/check_line.py` | `9e5487875771893f7593550fdb71b7b69561353626cbb99075ecd5b5f3a19459` | 562 |
-| `tools/check_proposal.py` | `5a1823b2f9b527ab49c04eb4d32d74564c8d9eb47685c877a4c2de32d043029e` | 704 |
-| `tools/check_sheets.py` | `ff3c7e0ad1e1e3e9a97680ab274a289783430ac2c89461ef56464cecbeade6a5` | 702 |
-| `tools/evaluate.py` | `39ba5215da24ec74c8e03793f9d8f26bff0fcc7ae48c1735e4e457a6a9227e85` | 7596 |
-| `tools/make_changes_manifest.py` | `7f4bcfdc61582618ca3907e09389b9ec21233344a3e5e54f9f24de097013eab3` | 1536 |
-| `tools/make_chatgpt_prompt.py` | `dc3666c5c6082cc7f69aa1ae109dff3a2d15cc76319afade9972ebcd39c49ae0` | 7736 |
-| `tools/make_manifest.py` | `1e5c8353cbc8556576abed046c35a65b838497bb8925e3f295999021512cde78` | 1906 |
-| `tools/make_ui_mock.py` | `77bd287f38a05072a175c1bfc15aca8281509c376a644bd39dbc65acef917963` | 5394 |
-| `tools/patch_cycle3_gaps.py` | `046c522ef6d6c7d48f890106aac12740ac7e0c598f141ba7b3c66b7cb44c1b9c` | 2672 |
-| `tools/patch_failure_flag.py` | `7e0723e9ad25d81e43304652cd04ebb6aa10e0e68de2839fcb00db1f902834dd` | 457 |
-| `tools/patch_handlers.py` | `b2981da28c5719cf341541af4fdd2deb05dd8543856763c3d0f198dc9b5b54ce` | 839 |
-| `tools/patch_item_index_error.py` | `823b186317749dc234d880ec4d0842b7e398a08dd54e7edcd365390014599aab` | 1007 |
-| `tools/patch_mode.py` | `50c3517b69de614ee79292a04c2438c1cb7df3eaef12319fcb960c0b83c505c9` | 1347 |
-| `tools/patch_split.py` | `3fa36f4b3d103d89eccd9df2f1adcbb82a3766ad106d7a3a472e8b9aa05b751b` | 1433 |
-| `tools/patch_tests.py` | `b2ce71fe2cb23f2de11702b7407fe2baecc2bc25c7022f8239986a2b64a828a1` | 266 |
-| `tools/ping_api.py` | `eba560e36f3e4af8e0677115c71f44af74268267a1bc752b48c7c9145f1dcb0f` | 860 |
-| `tools/probe_gh_credential.py` | `27a9c82b07ce069f2a0231f550bd7e5442007eaaa6f2308be9716526aece1307` | 1090 |
-| `tools/read_naspirator_token.ps1` | `3eb6434ad33010b42eaffd8d650c0fd1e9f6958156aedd0c1c0b658de28dbf08` | 1781 |
-| `tools/run_ocr.py` | `ced214715dc28979b43c5f84040c83a83b70f2a5b36cf406622eecae43563edb` | 1665 |
-| `tools/show_snippet.py` | `1b7f23b8361b83226fd4a06e700f6827943c02547638354883e71842d82405cf` | 270 |
-| `tools/split_chatgpt_prompt.py` | `79a69b6ded0403a7966ba792346db26809e9ddf10c1329b1c8a53bb9bfbddbc7` | 1078 |
-| `tools/verify_backup.py` | `0d4e4ab4cf3226d55a9147c774e51b76ff6efded9a1646f987f232ca071e061e` | 3537 |
 ```
 
 ## Новые файлы тестового режима
