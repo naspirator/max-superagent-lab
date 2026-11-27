@@ -107,6 +107,7 @@
 - Метрики: `reports/evaluation.json`
 - Тесты: `reports/tests-round2.txt`, `reports/baseline-round2.txt`
 - Проверка установщика: `reports/installer-simulation.txt`
+- Как запустить Superagent: `reports/SUPERAGENT_TRIGGER.md`
 - Откат: `staging/docs/ROLLBACK.md`
 - PR: https://github.com/naspirator/max-superagent-lab/pull/38
   (HEAD `5feb2f6`; пакет `review-package-11.tar.gz`)
