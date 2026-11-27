@@ -240,3 +240,113 @@ def test_ensemble_does_not_turn_minus_into_plus(tmp_path):
     assert replaced == 0
     assert merged.items[0].amount == Decimal("-500")
     assert merged.items[0].signs == ["+"]
+
+def test_empty_db_file_after_install_fails_closed(tmp_path):
+    """B01, пятый цикл: 0-байтный файл БД не должен возвращать пользователя в WORK."""
+    import sqlite3
+
+    root = tmp_path / "test-mode"
+    store = ModeStore(root)
+    store.initialize()
+    store.set_setting("mode:1", "TEST")
+    (root / "test_finance.db").unlink()
+    for marker in (root / "active").glob("*"):
+        marker.unlink()
+
+    # Обычное обращение к хранилищу после потери БД создаёт пустой файл
+    # (sqlite3.connect создаёт файл сразу, ещё до создания таблиц).
+    store.connect().close()
+    assert (root / "test_finance.db").is_file()
+    assert (root / "test_finance.db").stat().st_size == 0
+
+    # Перезапуск: файл существует, но схемы нет. Это потеря базы, а не
+    # первая установка: режим пользователя неизвестен.
+    again = ModeStore(root)
+    again.initialize()
+    assert again.recovered is True
+    handlers = ModeHandlers(again, client=None, admin_id=1)
+
+    sync = FakeTextMessage(1)
+    asyncio.run(handlers.cmd_blocked(sync))
+    assert sync.answers and "отключена" in sync.answers[0]
+
+    text = FakeTextMessage(1)
+    asyncio.run(handlers.on_text(text))
+    assert text.answers and "потеряна" in text.answers[0]
+
+    photo = FakeTextMessage(3)
+    handled = asyncio.run(handlers.handle_photo(photo, None, None))
+    assert handled is True
+    assert photo.answers and "НЕ отправлена" in photo.answers[0]
+
+    # И после ещё одного перезапуска флаг остаётся: БД уже со схемой и
+    # записанным recovered=1.
+    third = ModeStore(root)
+    third.initialize()
+    assert third.recovered is True
+
+
+def test_first_install_with_empty_db_file_is_not_recovered(tmp_path):
+    """Пустой файл без маркера installed — это первая установка, WORK разрешён."""
+    root = tmp_path / "fresh-mode"
+    root.mkdir()
+    (root / "test_finance.db").touch()
+    store = ModeStore(root)
+    store.initialize()
+    assert store.recovered is False
+    assert (root / "installed").is_file()
+    handlers = ModeHandlers(store, client=None, admin_id=1)
+    assert handlers.is_test(1) is False
+
+
+def test_corrupt_db_file_fails_closed(tmp_path):
+    """Мусор вместо БД: initialize не должен молча создавать пустой мир."""
+    import sqlite3
+
+    root = tmp_path / "test-mode"
+    store = ModeStore(root)
+    store.initialize()
+    store.set_setting("mode:1", "TEST")
+    (root / "test_finance.db").write_bytes(b"not a sqlite database")
+    broken = ModeStore(root)
+    with pytest.raises(sqlite3.DatabaseError):
+        broken.initialize()
+    # Fallback-заглушка считает режим неизвестным и блокирует все операции.
+    guard = UnavailableTestMode(tmp_path)
+    assert guard.is_test(2) is True
+
+def test_backup_restore_preserves_recovered_flag(tmp_path):
+    """MAJOR B01: restore() не должен возвращать хранилище, пускающее в WORK."""
+    root = tmp_path / "test-mode"
+    store = ModeStore(root)
+    store.initialize()
+    store.set_setting("mode:1", "TEST")
+    (root / "test_finance.db").unlink()
+    for marker in (root / "active").glob("*"):
+        marker.unlink()
+
+    gone = ModeStore(root)
+    gone.initialize()
+    assert gone.recovered is True
+    backup_dir = gone.backup(tmp_path / "backup")
+    assert (backup_dir / "installed").is_file()
+
+    restored = ModeStore.restore(backup_dir, tmp_path / "restored")
+    assert restored.recovered is True
+    handlers = ModeHandlers(restored, client=None, admin_id=1)
+    sync = FakeTextMessage(1)
+    asyncio.run(handlers.cmd_blocked(sync))
+    assert sync.answers and "отключена" in sync.answers[0]
+    photo = FakeTextMessage(3)
+    assert asyncio.run(handlers.handle_photo(photo, None, None)) is True
+    assert photo.answers and "НЕ отправлена" in photo.answers[0]
+
+
+def test_backup_restore_of_healthy_store_is_not_recovered(tmp_path):
+    store = make_store(tmp_path)
+    store.set_setting("mode:1", "TEST")
+    backup_dir = store.backup(tmp_path / "healthy-backup")
+    restored = ModeStore.restore(backup_dir, tmp_path / "healthy-restored")
+    assert restored.recovered is False
+    handlers = ModeHandlers(restored, client=None, admin_id=1)
+    assert handlers.is_test(1) is True

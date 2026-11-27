@@ -82,9 +82,34 @@ class ModeStore:
         connection.execute("PRAGMA foreign_keys = ON")
         return connection
 
+    def _has_schema(self) -> bool:
+        """Есть ли в файле БД настоящая схема тестового режима.
+
+        Файл может существовать, но быть пустым или повреждённым: sqlite3
+        создаёт 0-байтный файл при обычном connect() сразу после потери БД.
+        Такой файл нельзя считать восстановленной базой, иначе режим
+        пользователя снова станет WORK.
+        """
+        if not self.db_path.is_file():
+            return False
+        try:
+            with closing(sqlite3.connect(f"file:{self.db_path}?mode=ro", uri=True)) as db:
+                if not db.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='meta'"
+                ).fetchone():
+                    return False
+                return db.execute(
+                    "SELECT 1 FROM meta WHERE key='schema_version'"
+                ).fetchone() is not None
+        except sqlite3.Error:
+            return False
+
     def initialize(self) -> None:
         installed = self.root / "installed"
-        was_missing = not self.db_path.exists()
+        had_schema = self._has_schema()
+        # Режим уже был установлен, а базы (или её схемы) больше нет: это
+        # потеря данных, а не первая установка.
+        broken = installed.is_file() and not had_schema
         with closing(self.connect()) as db, db:
             db.executescript(
                 """
@@ -123,10 +148,14 @@ class ModeStore:
             if not installed.is_file():
                 # Первая установка: запоминаем сам факт установки вне SQLite.
                 installed.write_text("1", encoding="utf-8")
-                self.recovered = False
-            elif was_missing:
-                # Режим уже был установлен, но база исчезла. Новая база пуста,
-                # поэтому ни один пользователь не должен молча вернуться в WORK.
+                # Даже при первой установке уважаем флаг из уже существующей
+                # БД: так восстановленная копия не теряет fail-closed.
+                row = db.execute("SELECT value FROM meta WHERE key='recovered'").fetchone()
+                self.recovered = bool(row and row[0] == "1")
+            elif broken:
+                # Режим уже был установлен, но база исчезла или осталась
+                # пустым файлом. Новая база пуста, поэтому ни один
+                # пользователь не должен молча вернуться в WORK.
                 db.execute("INSERT OR REPLACE INTO meta VALUES ('recovered', '1')")
                 self.recovered = True
             else:
@@ -454,6 +483,10 @@ class ModeStore:
         # Маркеры режима переживают потерю SQLite и должны попадать в копию.
         if (self.root / "active").is_dir():
             shutil.copytree(self.root / "active", dest / "active")
+        # Маркер установки тоже копируется: иначе восстановленная копия
+        # выглядит как первая установка и может потерять fail-closed.
+        if (self.root / "installed").is_file():
+            shutil.copy2(self.root / "installed", dest / "installed")
         manifest = {
             "created_at": _now(),
             "schema_version": SCHEMA_VERSION,
@@ -504,6 +537,8 @@ class ModeStore:
             shutil.copytree(source / "input", dest / "input")
         if (source / "active").is_dir():
             shutil.copytree(source / "active", dest / "active")
+        if (source / "installed").is_file():
+            shutil.copy2(source / "installed", dest / "installed")
         with closing(sqlite3.connect(dest / TEST_DB_NAME)) as db:
             if db.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                 raise ValueError("Восстановленная база повреждена")
