@@ -78,7 +78,7 @@ ChatGPT и согласование владельца — отдельные э
 - `maxfinance_test/ui.py`
 - `maxfinance_test/handlers.py`
 - `maxfinance_test/integration.py`
-- `tests/*` (94 теста)
+- `tests/*` (100 тестов)
 - `tests_baseline/*` (7 тестов)
 - `docs/ARCHITECTURE.md`, `docs/ROLLBACK.md`
 - `deploy/backup-production.sh`, `deploy/rollback-production.sh`,
@@ -492,7 +492,7 @@ baseline, 0 failures** (`reports/tests-round2.txt`,
 
 Реализован изолированный тестовый режим с полным ручным редактированием, линией,
 словарём, базой подтверждённых примеров и защитой от записи в рабочую таблицу.
-Внутренние тесты: 94 + 7 baseline, 0 failures. ChatGPT Desktop провёл три
+Внутренние тесты: 100 + 7 baseline, 0 failures. ChatGPT Desktop провёл три
 цикла проверки; последний вердикт — **REVISE** (OCR −500→+500, B01 при
 отсутствии файла тестовой БД, ошибка установщика). Эти и MAJOR-замечания
 исправлены после вердикта, но четвёртый цикл не проводился: лимит трёх циклов
