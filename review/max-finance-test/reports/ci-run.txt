@@ -1,4 +1,4 @@
-CI: независимый прогон пакета MAX FINANCE TEST в чистом окружении
+﻿CI: независимый прогон пакета MAX FINANCE TEST в чистом окружении
 ==================================================================
 
 Run:    https://github.com/naspirator/max-superagent-lab/actions/runs/46059242077
@@ -37,3 +37,20 @@ PASS: отсутствие sv отклонено до изменений
 ALL INSTALLER SIMULATION CHECKS PASSED
 
 Итог: job `maxfinance-test` — success, все шаги success; job `test` — success.
+==================================================================
+Реестр прогонов на вершинах ветки review/max-finance-test-20261127
+
+Код не менялся с cad6262 (последний code-коммит): после него в ветке только
+.github/workflows/ci.yml, счётчик тестов в staging/README.md и отчёты. Поэтому
+все прогоны ниже проверяли один и тот же набор тестов.
+
+| run | коммит | результат |
+|---|---|---|
+| 46059242077 | ad8168f | success, 119 passed in 1.81s |
+| 46060253125 | 0fb30c2 | success |
+| 46063302889 | 4c83891 | success |
+| 46063583571 | 5d16fac | success |
+| 46063621288 | 4daa9bf | success |
+
+Прогон на самом этом коммите — на вкладке Actions (тот же код и набор).
+Адрес для сверки: https://github.com/naspirator/max-superagent-lab/actions
