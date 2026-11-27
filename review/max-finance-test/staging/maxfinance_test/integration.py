@@ -50,6 +50,9 @@ class UnavailableTestMode:
             return self.root.is_dir()
         try:
             with closing(sqlite3.connect(f"file:{path}?mode=ro", uri=True)) as db:
+                recovered = db.execute("SELECT value FROM meta WHERE key='recovered'").fetchone()
+                if recovered and recovered[0] == "1":
+                    return True
                 row = db.execute("SELECT value FROM settings WHERE key=?", (f"mode:{int(user_id)}",)).fetchone()
                 return bool(row and row[0] == "TEST")
         except sqlite3.Error:

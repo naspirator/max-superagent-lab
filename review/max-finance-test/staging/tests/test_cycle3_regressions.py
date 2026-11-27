@@ -87,6 +87,33 @@ def test_unavailable_guard_allows_work_only_if_test_store_never_existed(tmp_path
     assert guard.is_test(1) is False
 
 
+def test_recreated_db_after_marker_loss_fails_closed(tmp_path):
+    root = tmp_path / "test-mode"
+    store = ModeStore(root)
+    store.initialize()
+    store.set_setting("mode:1", "TEST")
+    # Имитируем потерю БД и маркера: режим был установлен, но пользователь
+    # больше нигде не отмечен.
+    (root / "test_finance.db").unlink()
+    for marker in (root / "active").glob("*"):
+        marker.unlink()
+    again = ModeStore(root)
+    again.initialize()
+    assert again.recovered is True
+    handlers = ModeHandlers(again, client=None, admin_id=1)
+    assert handlers.is_test(1) is True
+    assert handlers.is_test(2) is True
+    assert UnavailableTestMode(tmp_path).is_test(2) is True
+
+
+def test_first_install_is_not_recovered(tmp_path):
+    store = ModeStore(tmp_path / "fresh-mode")
+    store.initialize()
+    assert store.recovered is False
+    handlers = ModeHandlers(store, client=None, admin_id=1)
+    assert handlers.is_test(1) is False
+
+
 def test_unavailable_mode_blocks_free_text_for_test_user(tmp_path):
     from aiogram.dispatcher.event.bases import SkipHandler
 

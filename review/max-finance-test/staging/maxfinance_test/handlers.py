@@ -171,6 +171,9 @@ class ModeHandlers:
         self.store._write_mode_marker(uid, mode)
 
     def is_test(self, user_id: int) -> bool:
+        # Потерянная и заново созданная БД: режим неизвестен, fail closed.
+        if self.store.recovered:
+            return True
         # Маркер вне БД главнее: он переживает пересоздание/потерю SQLite.
         if self.store.is_test_marked(user_id):
             return True
@@ -465,6 +468,18 @@ class ModeHandlers:
     async def handle_photo(self, message: Message, bot: Bot, file) -> bool:
 
         uid = message.from_user.id
+
+        if self.store.recovered:
+
+            await message.answer(
+
+                "⛔ Тестовый режим недоступен: база тестового режима была потеряна. "
+
+                "Фотография НЕ отправлена в рабочий режим."
+
+            )
+
+            return True
 
         if not self.is_test(uid) or not self._allowed(message):
 
@@ -1575,6 +1590,18 @@ class ModeHandlers:
             raise SkipHandler
 
         if not self._allowed(message):
+
+            return
+
+        if self.store.recovered:
+
+            await message.answer(
+
+                "⛔ Тестовый режим недоступен: база тестового режима была потеряна. "
+
+                "Текстовый ввод не отправлен в рабочий режим."
+
+            )
 
             return
 

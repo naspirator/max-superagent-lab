@@ -78,7 +78,7 @@ ChatGPT и согласование владельца — отдельные э
 - `maxfinance_test/ui.py`
 - `maxfinance_test/handlers.py`
 - `maxfinance_test/integration.py`
-- `tests/*` (100 тестов)
+- `tests/*` (102 теста)
 - `tests_baseline/*` (7 тестов)
 - `docs/ARCHITECTURE.md`, `docs/ROLLBACK.md`
 - `deploy/backup-production.sh`, `deploy/rollback-production.sh`,
@@ -138,7 +138,7 @@ ChatGPT и согласование владельца — отдельные э
 
 После изменений:
 
-- 100/100 тестов нового режима и изоляции — PASS;
+- 102/102 теста нового режима и изоляции — PASS;
 - 7/7 baseline-тестов — PASS;
 - E2E-сценарий: фото → линия → OCR (заглушка) → правка суммы → подтверждение →
   пример сохранён, рабочий файл БД не изменился;
@@ -194,7 +194,7 @@ Superagent — существующий сервис `dsh-superagent` в WSL-д�
 backup input, restore путей, defaults один раз, rerun, ocr_stale, отказ от
 json_repair). M18 (точность OCR) остаётся ограничением: последний прогон —
 суммы 82,8% (старый 86,2%), сотрудники 42,1%, категории 75,9%, полностью
-верных 0/5. M19 закрыт: 100 тестов в пакете.
+верных 0/5. M19 закрыт: 102 теста в пакете.
 
 **Цикл 3:** PR-проверка дала **REVISE** с тремя BLOCKER (OCR мог превратить
 −500 в +500; B01 при отсутствии файла тестовой БД; ошибка установщика) и
@@ -231,7 +231,7 @@ APPROVE нет, внедрение не разрешено.
    строку.
 
 Добавлены 5 регрессионных тестов:
-`tests/test_cycle3_regressions.py`. Итог: **100 тестов нового режима + 7
+`tests/test_cycle3_regressions.py`. Итог: **102 теста нового режима + 7
 baseline, 0 failures** (`reports/tests-round2.txt`,
 `reports/baseline-round2.txt`).
 
@@ -256,6 +256,15 @@ baseline, 0 failures** (`reports/tests-round2.txt`,
    `test_unavailable_mode_stays_closed_if_test_db_moves`,
    `test_unavailable_guard_allows_work_only_if_test_store_never_existed`,
    `test_unavailable_mode_blocks_free_text_for_test_user`.
+
+   **Четвёртый цикл ChatGPT (HEAD 5fd4eab) дал REVISE именно по B01:** если БД
+   потеряна, а маркера пользователя нет, после перезапуска `initialize()`
+   создаёт пустую БД, и пользователь снова считается WORK. Закрыто: при первой
+   установке пишется `test-mode/installed`; если БД исчезла при существующем
+   `installed`, `initialize()` ставит `meta.recovered=1`, и `is_test`,
+   `handle_photo`, `on_text` блокируют все операции до восстановления БД или
+   явного сброса. Тест: `test_recreated_db_after_marker_loss_fails_closed`,
+   `test_first_install_is_not_recovered`.
 
 2. **Установщик `deploy/install-test-mode.sh`.** Первая версия при сбое
    восстанавливала весь каталог проекта из снимка, включая живую `finance.db`,
@@ -297,7 +306,7 @@ baseline, 0 failures** (`reports/tests-round2.txt`,
    фото подтверждённого примера, даже если его нет в манифесте; `restore`
    переписывает путь к фото в Undo-снимках.
 
-Итог: **100 тестов нового режима + 7 baseline, 0 failures**. Это по-прежнему
+Итог: **102 теста нового режима + 7 baseline, 0 failures**. Это по-прежнему
 внутренняя проверка, а не независимая приёмка.
 
 ---
@@ -459,9 +468,10 @@ baseline, 0 failures** (`reports/tests-round2.txt`,
    расхождение.
 8. Живой Telegram не тестировался из-за запрета второго polling.
 9. Скриншоты — макеты, не реальные снимки.
-10. Независимая проверка Superagent заблокирована особенностью GitHub-источника
-    (self-authored Issue не принимается); ChatGPT дал REVISE в цикле 1,
-    повторная передача исправлений технически не завершена. APPROVE нет.
+10. Независимая проверка Superagent заблокирована настройкой GitHub-источника
+    (self-authored элементы пропускаются, комментарии выключены); ChatGPT дал
+    REVISE в циклах 1–4, исправление B01 после четвёртого цикла не проверено.
+    APPROVE нет.
 11. Дообучение весов не выполнялось: используется база подтверждённых примеров
     как retrieval-подсказка.
 12. `json-repair` нужен для устойчивого разбора JSON модели; при установке
@@ -492,10 +502,11 @@ baseline, 0 failures** (`reports/tests-round2.txt`,
 
 Реализован изолированный тестовый режим с полным ручным редактированием, линией,
 словарём, базой подтверждённых примеров и защитой от записи в рабочую таблицу.
-Внутренние тесты: 100 + 7 baseline, 0 failures. ChatGPT Desktop провёл три
-цикла проверки; последний вердикт — **REVISE** (OCR −500→+500, B01 при
-отсутствии файла тестовой БД, ошибка установщика). Эти и MAJOR-замечания
-исправлены после вердикта, но четвёртый цикл не проводился: лимит трёх циклов
-исчерпан. APPROVE нет. Superagent-ревью заблокировано self-authored Issue.
+Внутренние тесты: 102 + 7 baseline, 0 failures. ChatGPT Desktop провёл четыре
+цикла проверки; последний вердикт — **REVISE** (B01: потеря БД вместе с
+маркером возвращала пользователя в WORK). Это исправлено маркером
+`test-mode/installed` и флагом `meta.recovered`, но **пятый цикл не
+проводился**. APPROVE нет. Superagent-ревью не получено: нужен новый Issue от
+человеческого аккаунта.
 В PROD ничего не внедрено. Владельцу итоговый отчёт на согласование не
 отправлялся, потому что условие «сначала APPROVE ChatGPT» не выполнено.

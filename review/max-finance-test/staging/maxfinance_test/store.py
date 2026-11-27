@@ -69,6 +69,10 @@ class ModeStore:
         self.root.mkdir(parents=True, exist_ok=True)
         self.photos_dir.mkdir(parents=True, exist_ok=True)
         self.input_dir.mkdir(parents=True, exist_ok=True)
+        # True, если БД тестового режима была потеряна и создана заново при
+        # уже установленном режиме. В этом состоянии режим пользователя
+        # неизвестен, поэтому рабочие операции запрещены (fail closed).
+        self.recovered = False
 
     # ---------- соединение и схема ----------
 
@@ -79,6 +83,8 @@ class ModeStore:
         return connection
 
     def initialize(self) -> None:
+        installed = self.root / "installed"
+        was_missing = not self.db_path.exists()
         with closing(self.connect()) as db, db:
             db.executescript(
                 """
@@ -114,6 +120,18 @@ class ModeStore:
             db.execute("INSERT OR IGNORE INTO meta VALUES ('engine_version', 'test-ocr-1.0')")
             db.execute("INSERT OR IGNORE INTO meta VALUES ('created_at', ?)", (_now(),))
             db.execute("INSERT OR IGNORE INTO settings VALUES ('mode', 'WORK')")
+            if not installed.is_file():
+                # Первая установка: запоминаем сам факт установки вне SQLite.
+                installed.write_text("1", encoding="utf-8")
+                self.recovered = False
+            elif was_missing:
+                # Режим уже был установлен, но база исчезла. Новая база пуста,
+                # поэтому ни один пользователь не должен молча вернуться в WORK.
+                db.execute("INSERT OR REPLACE INTO meta VALUES ('recovered', '1')")
+                self.recovered = True
+            else:
+                row = db.execute("SELECT value FROM meta WHERE key='recovered'").fetchone()
+                self.recovered = bool(row and row[0] == "1")
             try:
                 db.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_examples_photo ON examples(photo_sha)")
             except sqlite3.IntegrityError:
