@@ -203,3 +203,39 @@ id никогда не переиспользуется для другого ч
 Итог: **111 + 7 baseline, 0 failures** (`reports/tests-at-head.txt`). Седьмой
 цикл не проводился; APPROVE нет.
 
+## Цикл 7 — вердикт и исправления
+
+Цикл 7 (HEAD 423ec13) дал **VERDICT: REVISE**; новых BLOCKER нет, один MAJOR:
+
+**MAJOR — регрессионный тест не обнаруживал дефект шестого цикла.**
+`tests/test_dispatch_isolation.py:114–127, 156–168`. Тест удаления таблицы
+`settings` использовал `recovered_store()`, который заранее ставил
+`meta.recovered=1`, поэтому он проходил и со старой `_has_schema()` из
+`ccee903`.
+
+Замечание проверено по коду и подтверждено: `recovered_store()` удалял файл БД,
+создавал пустой и возвращал хранилище с `recovered=True`; после
+`DROP TABLE settings` повторный `initialize()` шёл в ветку `else` и читал уже
+записанный `meta.recovered=1`. Утверждение теста выполнялось на любой
+реализации проверки схемы.
+
+Исправлено:
+
+1. `damaged_store_root()` — здоровая база (`recovered=False`), включение TEST,
+   затем `DROP TABLE settings` и удаление маркера `active/1`; предусловие
+   проверяет полноту схемы до повреждения.
+2. `test_dispatcher_blocks_when_meta_survives_but_settings_table_is_lost`
+   переписан на этот сценарий: `initialize()` → `recovered=True` → `/sync`,
+   текст и фото не доходят до WORK.
+3. Мета-тест `test_old_schema_check_would_let_user_back_into_work`: с
+   `_has_schema()` из `ccee903` тот же сценарий обязан дать `recovered=False` и
+   доставку всех трёх обновлений в WORK.
+4. `tools/verify_regression_catches_settings_bug.py` — тот же контроль вне
+   pytest: `OLD_IMPLEMENTATION=FAIL`, `CURRENT_IMPLEMENTATION=PASS`,
+   `NEGATIVE_CONTROL=OK`.
+5. `tools/make_changes_manifest.py` больше не включает `.pytest_cache` и
+   внутренние скрипты раундов; манифест пересобран по текущим файлам.
+
+Итог: **112 + 7 baseline, 0 failures** (`reports/tests-at-head.txt`). Восьмой
+цикл не проводился; APPROVE нет.
+

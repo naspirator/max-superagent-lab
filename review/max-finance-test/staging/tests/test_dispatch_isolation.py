@@ -14,7 +14,7 @@ from aiogram.filters import Command
 from aiogram.types import Message, Update
 
 from maxfinance_test.handlers import ModeHandlers
-from maxfinance_test.store import ModeStore
+from maxfinance_test.store import REQUIRED_TABLES, ModeStore
 
 DATE = 1732776000
 
@@ -153,19 +153,82 @@ def test_dispatcher_blocks_sync_text_and_photo_after_db_loss(tmp_path):
     assert "НЕ отправлена" in joined
 
 
-def test_dispatcher_blocks_when_meta_survives_but_settings_table_is_lost(tmp_path):
+def damaged_store_root(tmp_path):
+    """Здоровая база с TEST, у которой затем отняли `settings` и маркер.
+
+    Схема сначала полная и `recovered=False`: только так сценарий шестого
+    цикла воспроизводим. Если стартовать с уже восстановленной базы
+    (`recovered=True`), тест проходит на любой реализации `_has_schema()`.
+    """
     import sqlite3
 
-    store = recovered_store(tmp_path)
+    root = tmp_path / "test-mode"
+    store = ModeStore(root)
+    store.initialize()
+    store.set_setting("mode:1", "TEST")
+    assert store.recovered is False
     with sqlite3.connect(store.db_path) as db:
+        present = {
+            row[0]
+            for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        }
+        assert set(REQUIRED_TABLES).issubset(present)
         db.execute("DROP TABLE settings")
         db.commit()
-    again = ModeStore(store.root)
+    # Ни settings, ни маркера: режим определяется только признаком повреждения.
+    (root / "active" / "1").unlink()
+    return root
+
+
+def old_has_schema(self) -> bool:
+    """Проверка схемы из ccee903: смотрит только на таблицу `meta`.
+
+    Нужна мета-тесту ниже, чтобы доказать: сценарий действительно ловит
+    дефект шестого цикла, а не проходит по любой реализации.
+    """
+    import sqlite3
+    from contextlib import closing
+
+    if not self.db_path.is_file():
+        return False
+    try:
+        with closing(sqlite3.connect(f"file:{self.db_path}?mode=ro", uri=True)) as db:
+            if not db.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='meta'"
+            ).fetchone():
+                return False
+            return db.execute(
+                "SELECT 1 FROM meta WHERE key='schema_version'"
+            ).fetchone() is not None
+    except sqlite3.Error:
+        return False
+
+
+def test_dispatcher_blocks_when_meta_survives_but_settings_table_is_lost(tmp_path):
+    """Сценарий шестого цикла: живая `meta`, потерянная `settings`."""
+    root = damaged_store_root(tmp_path)
+    again = ModeStore(root)
     again.initialize()
     assert again.recovered is True
     calls, texts = run_updates(again, tmp_path)
     assert calls == []
     assert "отключена" in "\n".join(texts)
+
+
+def test_old_schema_check_would_let_user_back_into_work(tmp_path, monkeypatch):
+    """Мета-тест: с проверкой из ccee903 дефект воспроизводится.
+
+    Тот же сценарий на старой `_has_schema()` обязан вернуть пользователя в
+    WORK. Если этот тест когда-нибудь упадёт, значит предыдущий тест больше
+    не воспроизводит дефект и ничего не доказывает.
+    """
+    root = damaged_store_root(tmp_path)
+    monkeypatch.setattr(ModeStore, "_has_schema", old_has_schema)
+    again = ModeStore(root)
+    again.initialize()
+    assert again.recovered is False
+    calls, _texts = run_updates(again, tmp_path)
+    assert calls == ["sync", "text", "photo"]
 
 
 def test_dispatcher_allows_work_user_without_test_marker(tmp_path):

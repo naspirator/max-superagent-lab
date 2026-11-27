@@ -1,6 +1,6 @@
 # MAX FINANCE TEST — текущий статус
 
-Дата: 27.11.2026, 22:35 MSK.
+Дата: 27.11.2026, 22:25 MSK.
 
 ## Готово
 
@@ -16,9 +16,10 @@
   примеров, backup/restore.
 - Fail-closed изоляция TEST: при потере, повреждении или неполной схеме
   тестовой БД блокируются команды, фото и свободный текст.
-- **111 тестов нового режима + 7 baseline, 0 failures.**
-  `reports/tests-at-head.txt`.
-- Независимая проверка ChatGPT Desktop: шесть циклов, все — **REVISE**.
+- **112 тестов нового режима + 7 baseline, 0 failures**, плюс пройденный
+  отрицательный контроль регрессионного теста.
+  `reports/tests-at-head.txt`, `reports/tests-round5-win.txt`.
+- Независимая проверка ChatGPT Desktop: семь циклов, все — **REVISE**.
   Транскрипты и вердикты: `reports/chatgpt-review-*.txt`.
 
 ## Вердикты по циклам
@@ -34,24 +35,30 @@
 6. Цикл 6 (HEAD ccee903) — B01: неполная схема БД (таблица `settings`
    потеряна, `meta` жива) возвращала в WORK; MAJOR: новые тесты вызывали
    обработчики напрямую, минуя диспетчер aiogram.
+7. Цикл 7 (HEAD 423ec13) — новых BLOCKER нет. MAJOR: регрессионный тест на
+   потерю `settings` стартовал с уже восстановленной базы и проходил на любой
+   реализации `_has_schema()`.
 
-## Исправлено после цикла 6 (раунд 4)
+## Исправлено после цикла 7 (раунд 5)
 
-1. `REQUIRED_TABLES` — `_has_schema()` требует все девять таблиц схемы v1
-   (`meta`, `staff`, `staff_alias`, `seed_conflicts`, `settings`, `drafts`,
-   `line_settings`, `examples`, `audit`). Отсутствие любой при существующем
-   `installed` включает `meta.recovered=1`.
-2. `tests/test_dispatch_isolation.py` — обновления проходят через настоящий
-   `Dispatcher.feed_update` и `Bot` с сессией без сети:
-   - потеря БД и пустой файл → `/sync`, текст и фото не доходят до WORK;
-   - `meta` жива, `settings` удалена → блокировка;
-   - обычный пользователь без маркера → все три обновления доходят до WORK.
-3. В тест `backup`/`restore` добавлена проверка свободного текста.
+1. `tests/test_dispatch_isolation.py`: сценарий шестого цикла начинается со
+   **здоровой** базы (`recovered=False`), затем включается TEST, удаляются
+   таблица `settings` и маркер `active/1`; предусловие проверяет полноту схемы
+   до повреждения.
+2. Мета-тест `test_old_schema_check_would_let_user_back_into_work`: с
+   `_has_schema()` из `ccee903` тот же сценарий обязан вернуть пользователя в
+   WORK (`recovered=False`, все три обновления доставлены). Это доказывает, что
+   регрессионный тест не пустой.
+3. `tools/verify_regression_catches_settings_bug.py` — тот же контроль вне
+   pytest: `OLD_IMPLEMENTATION=FAIL`, `CURRENT_IMPLEMENTATION=PASS`,
+   `NEGATIVE_CONTROL=OK`.
+4. `tools/make_changes_manifest.py`: манифест больше не включает
+   `.pytest_cache` и внутренние скрипты раундов.
 
-Итог: **111 + 7 baseline, 0 failures.** Седьмой цикл (проверка исправлений
-раунда 4) ещё не проводился; APPROVE нет.
+Итог: **112 + 7 baseline, 0 failures.** Восьмой цикл (проверка исправлений
+раунда 5) ещё не проводился; APPROVE нет.
 
-## Исправлено ранее (раунды 1–3)
+## Исправлено ранее (раунды 1–4)
 
 - Установщик: откат только кода (без живой БД), привязка к `$PROJECT`,
   два замера PID вместо одного `sv status`, `$PREFIX/bin/sv`, проверка
@@ -59,18 +66,22 @@
   dry-run на телефоне и симуляцией семи сценариев
   (`reports/installer-simulation.txt`).
 - `installed` пишется при первой установке; если БД исчезла, пуста или её
-  схема неполная — `meta.recovered=1`, рабочие операции блокируются.
+  схема неполная — `meta.recovered=1`, рабочие операции блокируются;
+  `REQUIRED_TABLES` требует все девять таблиц схемы v1.
 - `backup`/`restore` переносят `installed`; при первой установке
   `initialize()` читает `meta.recovered` из существующей БД.
+- Интеграционные тесты через настоящий `Dispatcher.feed_update` и `Bot` с
+  сессией без сети (`tests/test_dispatch_isolation.py`).
 - Регрессии: устаревшая сводка, завершение отчёта после сбоя OCR, обязательное
   фото в `verify_backup`, путь к фото в Undo после `restore`, числовой
   `item_id`, карточка сотрудника, ID после деактивации, знак в ансамбле.
 
 ## Не готово / блокеры
 
-1. **APPROVE ChatGPT не получен.** Шесть циклов, последний вердикт — REVISE.
-   Дефекты B01 и MAJOR раунда 4 исправлены, но седьмой цикл не проводился.
-   Без APPROVE внедрение и отправка владельцу не выполнялись.
+1. **APPROVE ChatGPT не получен.** Семь циклов, последний вердикт — REVISE.
+   Дефект MAJOR раунда 5 исправлен и подтверждён отрицательным контролем, но
+   восьмой цикл не проводился. Без APPROVE внедрение и отправка владельцу не
+   выполнялись.
 2. **Superagent-ревью не получено.** Причина подтверждена кодом и настройками:
    - источник пропускает self-authored элементы
      (`src/sources/github.ts:227`);
@@ -78,7 +89,8 @@
    - Issue #39 создан `max535max` — это аккаунт агента, поэтому пропущен;
    - поток Issues стартовал `16:08:34Z`, Issue #39 создан `16:07:56Z`.
    Нужен **новый Issue** от человеческого аккаунта `naspirator` —
-   `reports/SUPERAGENT_TRIGGER.md`.
+   `reports/SUPERAGENT_TRIGGER.md`. Проверено 27.11.2026 22:20: новых Issue от
+   `naspirator` нет (последний — #37, закрыт 21.11.2026).
 3. **Точность OCR недостаточна для автоматической сдачи:** суммы 82,8%,
    сотрудники 42,1%, категории 75,9%, полностью верных 0/5. Нужна ручная
    проверка каждой позиции.
@@ -106,19 +118,19 @@
 - Ответы на вердикты: `reports/REVIEW_RESPONSE.md`
 - Diff и манифест: `reports/changes.diff`
 - Метрики: `reports/evaluation.json`
-- Тесты: `reports/tests-at-head.txt`
+- Тесты и отрицательный контроль: `reports/tests-at-head.txt`
 - Проверка установщика: `reports/installer-simulation.txt`
-- Вердикты: `reports/chatgpt-review-cycle4-verdict.txt`,
-  `reports/chatgpt-review-cycle5-verdict.txt`,
-  `reports/chatgpt-review-cycle6-verdict.txt`
-- Промпт следующего цикла: `reports/chatgpt-cycle7-ask.txt`
+- Вердикты: `reports/chatgpt-review-cycle5-verdict.txt`,
+  `reports/chatgpt-review-cycle6-verdict.txt`,
+  `reports/chatgpt-review-cycle7-verdict.txt`
+- Промпт следующего цикла: `reports/chatgpt-cycle8-ask.txt`
 - Откат: `staging/docs/ROLLBACK.md`
 - PR: https://github.com/naspirator/max-superagent-lab/pull/38
-  (пакет `review-package-12.tar.gz`)
+  (пакет `review-package-13.tar.gz`)
 
 ## Следующий шаг
 
-1. Провести седьмой цикл ChatGPT по исправлениям раунда 4.
+1. Провести восьмой цикл ChatGPT по исправлению раунда 5.
 2. Для снятия блокера Superagent — новый Issue от `naspirator` (человек).
 3. При APPROVE — отправить владельцу отчёт с кнопками «Принять / Доработать /
    Полный отчёт / Пауза».
