@@ -55,8 +55,13 @@
 4. `tools/make_changes_manifest.py`: манифест больше не включает
    `.pytest_cache` и внутренние скрипты раундов.
 
-Итог: **112 + 7 baseline, 0 failures.** Восьмой цикл (проверка исправлений
-раунда 5) ещё не проводился; APPROVE нет.
+Итог: **112 + 7 baseline, 0 failures.** Восьмой цикл вернул **BLOCKED**:
+новых BLOCKER/MAJOR нет, замечание седьмого цикла закрыто; причина только в
+среде проверки — у ChatGPT нет `aiogram` и сетевого доступа для повторного
+прогона. Поэтому пакет получил независимый прогон в чистом окружении CI
+(`.github/workflows/ci.yml`, job `maxfinance-test`): **119 passed**
+(112 + 7), `NEGATIVE_CONTROL=OK`, установщик 7/7 — `reports/ci-run.txt`.
+APPROVE пока нет.
 
 ## Исправлено ранее (раунды 1–4)
 
@@ -78,10 +83,12 @@
 
 ## Не готово / блокеры
 
-1. **APPROVE ChatGPT не получен.** Семь циклов, последний вердикт — REVISE.
-   Дефект MAJOR раунда 5 исправлен и подтверждён отрицательным контролем, но
-   восьмой цикл не проводился. Без APPROVE внедрение и отправка владельцу не
-   выполнялись.
+1. **APPROVE ChatGPT не получен.** Восемь циклов; восьмой — **BLOCKED**
+   технически (в среде проверки нет `aiogram` и сети), при этом новых дефектов
+   в коде нет, замечание седьмого цикла закрыто. Независимый прогон теперь
+   есть в CI: run 46059242077, job `maxfinance-test` — `119 passed in 1.81s`,
+   `NEGATIVE_CONTROL=OK`, установщик 7/7 (`reports/ci-run.txt`). Без APPROVE
+   внедрение и отправка владельцу не выполнялись.
 2. **Superagent-ревью не получено.** Причина подтверждена кодом и настройками:
    - источник пропускает self-authored элементы
      (`src/sources/github.ts:227`);
@@ -112,8 +119,11 @@
 - токен и сотрудники не менялись;
 - внедрение, merge и отправка владельцу не выполнялись.
 
-Повторная проверка 27.11.2026, 22:27 MSK: служба `run` (pid 20786), оба
+Повторная проверка 27.11.2026, 22:47 MSK: служба `run` (pid 20786), оба
 SHA-256 совпадают с указанными выше, тестовых артефактов в proot нет.
+Отдельно проверены токены: на токене `@ShinomontazhFinance_bot` работает один
+процесс; `@Shin_Kas_New_bot` и `@Kas4a_shin_nn_bot` — другие боты
+(`max-server/bots/shinomontazh`), второго polling на рабочем токене нет.
 
 ## Где смотреть
 
@@ -122,18 +132,21 @@ SHA-256 совпадают с указанными выше, тестовых а
 - Diff и манифест: `reports/changes.diff`
 - Метрики: `reports/evaluation.json`
 - Тесты и отрицательный контроль: `reports/tests-at-head.txt`
+- Независимый прогон в CI: `reports/ci-run.txt`
 - Проверка установщика: `reports/installer-simulation.txt`
 - Вердикты: `reports/chatgpt-review-cycle5-verdict.txt`,
   `reports/chatgpt-review-cycle6-verdict.txt`,
   `reports/chatgpt-review-cycle7-verdict.txt`
-- Промпт следующего цикла: `reports/chatgpt-cycle8-ask.txt`
+- Вердикт восьмого цикла: `reports/chatgpt-review-cycle8-verdict.txt`
+- Промпт следующего цикла: `reports/chatgpt-cycle9-ask.txt`
 - Откат: `staging/docs/ROLLBACK.md`
 - PR: https://github.com/naspirator/max-superagent-lab/pull/38
   (пакет `review-package-13.tar.gz`)
 
 ## Следующий шаг
 
-1. Провести восьмой цикл ChatGPT по исправлению раунда 5.
+1. Девятый цикл ChatGPT: проверить CI-прогон `reports/ci-run.txt` и снять
+   технический BLOCKED.
 2. Для снятия блокера Superagent — новый Issue от `naspirator` (человек).
 3. При APPROVE — отправить владельцу отчёт с кнопками «Принять / Доработать /
    Полный отчёт / Пауза».

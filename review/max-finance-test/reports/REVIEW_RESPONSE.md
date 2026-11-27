@@ -239,3 +239,23 @@ id никогда не переиспользуется для другого ч
 Итог: **112 + 7 baseline, 0 failures** (`reports/tests-at-head.txt`). Восьмой
 цикл не проводился; APPROVE нет.
 
+## Восьмой цикл — BLOCKED (техническая причина)
+
+Вердикт: `VERDICT: BLOCKED`. Новых BLOCKER/MAJOR нет. Замечание седьмого цикла
+подтверждено закрытым: `tests/test_dispatch_isolation.py:156-231` — сценарий
+начинается со здоровой БД, мета-тест `old_has_schema` доказывает воспроизведение
+дефекта на `ccee903`; `reports/tests-at-head.txt` — 112 + 7 PASS и
+`NEGATIVE_CONTROL=OK`.
+
+Единственная причина BLOCKED — среда проверки: нет `aiogram` и сетевого доступа
+для независимого повторного прогона. Это не дефект пакета, поэтому добавлено
+независимое исполнение:
+
+1. `.github/workflows/ci.yml`, job `maxfinance-test`: Ubuntu, Python 3.12,
+   `pip install -r requirements.txt` из PyPI, `pytest tests tests_baseline`,
+   отрицательный контроль, `sh deploy/tests/simulate-install.sh`, артефакты.
+2. Прогон 46059242077 (коммит `ad8168f`) — success:
+   `119 passed in 1.81s`, `NEGATIVE_CONTROL=OK`, установщик 7/7
+   (`reports/ci-run.txt`).
+3. Код после `cad6262` не менялся: в `a6a798b` и `ad8168f` только CI, счётчик
+   тестов в README и строка README в `reports/changes.diff`.

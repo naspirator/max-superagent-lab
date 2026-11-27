@@ -1,0 +1,39 @@
+CI: независимый прогон пакета MAX FINANCE TEST в чистом окружении
+==================================================================
+
+Run:    https://github.com/naspirator/max-superagent-lab/actions/runs/46059242077
+Commit: ad8168f638cb9a703fe328af4126742f81b0410c
+Job:    maxfinance-test (ubuntu-latest, Python 3.12.16)
+Дата:   27.11.2026, 19:48 UTC (22:48 MSK)
+
+Шаги job: checkout, setup-python 3.12, pip install -r requirements.txt (PyPI),
+pytest tests tests_baseline, отрицательный контроль, симуляция установщика,
+выгрузка артефактов (pytest.xml, pytest.log, negative-control.log,
+installer.log, pip.log).
+
+Зависимости установлены из PyPI (фрагмент лога):
+Successfully installed Pillow-13.0.0 aiofiles-25.1.0 aiogram-3.34.0
+aiohttp-3.14.5 aiohappyeyeballs-2.7.1 aiosignal-1.4.0 annotated-types-0.8.0
+anyio-4.16.0 attrs-26.1.0 certifi-2026.11.20 cffi-2.1.1 ... (полный список в
+логе job).
+
+Тесты:
+============================= 119 passed in 1.81s ==============================
+(112 тестов tests/ + 7 baseline)
+
+Отрицательный контроль:
+OLD_IMPLEMENTATION=FAIL (ожидается FAIL)
+CURRENT_IMPLEMENTATION=PASS (ожидается PASS)
+NEGATIVE_CONTROL=OK
+
+Установщик:
+PASS: установка заменила код, БД не тронута
+PASS: при сбое службы восстановлен код, БД не откатывалась
+PASS: dry-run ничего не изменил
+PASS: битый пакет отклонён до замены (rc=2)
+PASS: откат затронул PROJECT, посторонний каталог не тронут
+PASS: смена PID обнаружена, выполнен откат
+PASS: отсутствие sv отклонено до изменений
+ALL INSTALLER SIMULATION CHECKS PASSED
+
+Итог: job `maxfinance-test` — success, все шаги success; job `test` — success.
