@@ -75,7 +75,7 @@ def test_conflicting_alias_is_not_silently_merged(tmp_path):
 
 def test_draft_and_line_survive_reopen(env, tmp_path):
     store, _ = env
-    report = Report("2026-11-27", items=[Item([Decimal("1000")], category="nal")])
+    report = Report("2026-11-27", photo_reviewed=True, items=[Item([Decimal("1000")], category="nal")])
     store.save_draft(42, report)
     store.save_line("abc", (0.5, 0.52))
     again = ModeStore(store.root)
@@ -87,7 +87,7 @@ def test_draft_and_line_survive_reopen(env, tmp_path):
 
 def test_confirmed_example_requires_valid_report(env):
     store, _ = env
-    report = Report("2026-11-27", items=[Item([Decimal("1000")], category="employee")])
+    report = Report("2026-11-27", photo_reviewed=True, items=[Item([Decimal("1000")], category="employee")])
     with pytest.raises(Exception):
         store.record_confirmed(report, None, b"photo", 1)
     report.set_employee(0, 1)
@@ -101,7 +101,7 @@ def test_confirmed_example_requires_valid_report(env):
 
 def test_duplicate_confirmation_is_rejected(env):
     store, _ = env
-    report = Report("2026-11-27", items=[Item([Decimal("1000")], category="nal")])
+    report = Report("2026-11-27", photo_reviewed=True, items=[Item([Decimal("1000")], category="nal")])
     store.record_confirmed(report, None, b"same-photo", 1)
     with pytest.raises(ValueError):
         store.record_confirmed(report, None, b"same-photo", 1)
@@ -158,7 +158,7 @@ def test_removed_alias_is_not_restored_on_restart(env, tmp_path):
 
 def test_holdout_never_used_for_few_shot(env):
     store, _ = env
-    report = Report("2026-11-27", items=[Item([Decimal("1000")], category="nal")])
+    report = Report("2026-11-27", photo_reviewed=True, items=[Item([Decimal("1000")], category="nal")])
     store.record_confirmed(report, None, b"photo-a", 1, split="train")
     store.record_confirmed(report, None, b"photo-b", 1, split="holdout")
     shots = store.few_shot(10)
@@ -168,7 +168,7 @@ def test_holdout_never_used_for_few_shot(env):
 
 def test_error_types_recorded(env):
     store, _ = env
-    original = Report("2026-11-27", items=[Item([Decimal("1000")], category="nal")])
+    original = Report("2026-11-27", photo_reviewed=True, items=[Item([Decimal("1000")], category="nal")])
     corrected = Report.from_json(original.to_json())
     corrected.set_term(0, 0, "1200")
     store.record_confirmed(corrected, original, b"photo", 1)
@@ -177,7 +177,7 @@ def test_error_types_recorded(env):
 
 def test_backup_restore_and_tamper_detection(env, tmp_path):
     store, _ = env
-    report = Report("2026-11-27", items=[Item([Decimal("1000")], category="nal")])
+    report = Report("2026-11-27", photo_reviewed=True, items=[Item([Decimal("1000")], category="nal")])
     store.record_confirmed(report, None, b"photo", 1)
     backup = store.backup(tmp_path / "backup")
     assert ModeStore.verify_backup(backup)["files"]
@@ -194,7 +194,7 @@ def test_backup_restore_and_tamper_detection(env, tmp_path):
 
 def test_export_examples(env, tmp_path):
     store, _ = env
-    report = Report("2026-11-27", items=[Item([Decimal("1000")], category="nal")])
+    report = Report("2026-11-27", photo_reviewed=True, items=[Item([Decimal("1000")], category="nal")])
     store.record_confirmed(report, None, b"photo", 1)
     archive = store.export_examples(tmp_path / "export.zip")
     assert archive.is_file() and archive.stat().st_size > 0

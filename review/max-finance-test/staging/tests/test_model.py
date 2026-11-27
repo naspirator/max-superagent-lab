@@ -35,7 +35,7 @@ def test_signed_total_programmatic():
 
 
 def test_report_totals_and_employee_payouts():
-    report = Report("2026-11-27", items=[
+    report = Report("2026-11-27", photo_reviewed=True, items=[
         item([12000], category="beznal"),
         item([10050], category="nal"),
         item([7150], category="employee", employee_id=1, source="nal"),
@@ -52,7 +52,7 @@ def test_report_totals_and_employee_payouts():
 
 
 def test_manual_category_total_does_not_change_employee_amounts():
-    report = Report("2026-11-27", items=[
+    report = Report("2026-11-27", photo_reviewed=True, items=[
         item([10000], category="beznal"),
         item([3000], category="employee", employee_id=1, source="beznal"),
     ])
@@ -64,7 +64,7 @@ def test_manual_category_total_does_not_change_employee_amounts():
 
 
 def test_every_item_is_editable_and_signs_change():
-    report = Report("2026-11-27", items=[item([1000, 200])])
+    report = Report("2026-11-27", photo_reviewed=True, items=[item([1000, 200])])
     report.set_sign(0, 1, "-")
     assert report.items[0].amount == Decimal("800")
     report.set_term(0, 0, "1500")
@@ -76,7 +76,7 @@ def test_every_item_is_editable_and_signs_change():
 
 
 def test_split_and_merge():
-    report = Report("2026-11-27", items=[item([1000, 2000, 300], category="nal")])
+    report = Report("2026-11-27", photo_reviewed=True, items=[item([1000, 2000, 300], category="nal")])
     a, b = report.split_item(0, 2)
     assert len(report.items) == 2
     assert report.items[a].amount == Decimal("3000")
@@ -86,7 +86,7 @@ def test_split_and_merge():
 
 
 def test_delete_add_move_undo():
-    report = Report("2026-11-27", items=[item([1000]), item([2000])])
+    report = Report("2026-11-27", photo_reviewed=True, items=[item([1000]), item([2000])])
     report.add_item(item([3000]))
     assert len(report.items) == 3
     report.move_item(2, -1)
@@ -100,7 +100,7 @@ def test_delete_add_move_undo():
 
 
 def test_validation_requires_employee_and_source():
-    report = Report("2026-11-27", items=[item([1000], category="employee")])
+    report = Report("2026-11-27", photo_reviewed=True, items=[item([1000], category="employee")])
     with pytest.raises(ReportError):
         report.validate()
     report.set_employee(0, 1)
@@ -109,7 +109,7 @@ def test_validation_requires_employee_and_source():
 
 
 def test_uncertain_item_blocks_confirmation_until_edited():
-    report = Report("2026-11-27", items=[item([1000], category="nal", uncertain=True)])
+    report = Report("2026-11-27", photo_reviewed=True, items=[item([1000], category="nal", uncertain=True)])
     with pytest.raises(ReportError):
         report.validate()
     report.set_term(0, 0, "1000")
@@ -117,7 +117,7 @@ def test_uncertain_item_blocks_confirmation_until_edited():
 
 
 def test_struck_item_must_be_ignored():
-    report = Report("2026-11-27", items=[
+    report = Report("2026-11-27", photo_reviewed=True, items=[
         item([1000], category="nal"),
         item([500], category="ignore", struck=True),
     ])
@@ -128,13 +128,13 @@ def test_struck_item_must_be_ignored():
 
 
 def test_itog_not_required_and_not_auto_zero():
-    report = Report("2026-11-27", items=[item([1000], category="beznal")])
+    report = Report("2026-11-27", photo_reviewed=True, items=[item([1000], category="beznal")])
     assert report.validate()
     assert "itog" not in report.totals()["categories"]
 
 
 def test_ocr_incomplete_and_stale_block_confirmation():
-    report = Report("2026-11-27", items=[item([1000], category="nal")], ocr_complete=False)
+    report = Report("2026-11-27", photo_reviewed=True, items=[item([1000], category="nal")], ocr_complete=False)
     with pytest.raises(ReportError):
         report.validate()
     report.ocr_complete = True
@@ -144,19 +144,19 @@ def test_ocr_incomplete_and_stale_block_confirmation():
 
 
 def test_unknown_source_is_not_allowed():
-    report = Report("2026-11-27", items=[item([1000], category="employee", employee_id=1, source="unknown")])
+    report = Report("2026-11-27", photo_reviewed=True, items=[item([1000], category="employee", employee_id=1, source="unknown")])
     with pytest.raises(ReportError):
         report.validate()
 
 
 def test_employee_must_exist_among_active():
-    report = Report("2026-11-27", items=[item([1000], category="employee", employee_id=99, source="nal")])
+    report = Report("2026-11-27", photo_reviewed=True, items=[item([1000], category="employee", employee_id=99, source="nal")])
     with pytest.raises(ReportError):
         report.validate({1, 2})
 
 
 def test_undo_keeps_monotonic_revision_and_menu_id():
-    report = Report("2026-11-27", items=[item([1000], category="nal")], version=7)
+    report = Report("2026-11-27", photo_reviewed=True, items=[item([1000], category="nal")], version=7)
     report.message_id = 123
     report.set_term(0, 0, "1200")
     before = report.version
@@ -167,7 +167,7 @@ def test_undo_keeps_monotonic_revision_and_menu_id():
 
 
 def test_split_and_merge_keep_struck_flag():
-    report = Report("2026-11-27", items=[item([1000, 200], category="ignore", struck=True)])
+    report = Report("2026-11-27", photo_reviewed=True, items=[item([1000, 200], category="ignore", struck=True)])
     left, right = report.split_item(0, 1)
     assert report.items[left].struck is True
     assert report.items[right].struck is True
@@ -176,12 +176,12 @@ def test_split_and_merge_keep_struck_flag():
 
 
 def test_negative_single_amount_remains_negative_by_default():
-    report = Report("2026-11-27", items=[item([-500], category="debt")])
+    report = Report("2026-11-27", photo_reviewed=True, items=[item([-500], category="debt")])
     assert report.items[0].amount == Decimal("-500")
 
 
 def test_debts_are_separate_and_not_silently_deducted():
-    report = Report("2026-11-27", items=[
+    report = Report("2026-11-27", photo_reviewed=True, items=[
         item([12000], category="beznal"),
         item([1000], category="debt"),
     ])
@@ -191,8 +191,19 @@ def test_debts_are_separate_and_not_silently_deducted():
     assert "не вычитаются" in totals["debt_note"]
 
 
+def test_ensemble_does_not_replace_signed_expression():
+    from maxfinance_test.ensemble import merge_amounts
+    report = Report("2026-11-27", photo_reviewed=True, items=[item([1000, 200], ["+", "-"], bbox=[0.1, 0.1, 0.3, 0.2])])
+    class Old:
+        terms = ("1200",)
+        bbox = [0.1, 0.1, 0.3, 0.2]
+    merge_amounts(report, [Old()])
+    assert report.items[0].amount == Decimal("800")
+    assert report.items[0].signs == ["+", "-"]
+
+
 def test_classify_split_not_added_deleted():
-    original = Report("2026-11-27", items=[item([1000, 200], category="nal")])
+    original = Report("2026-11-27", photo_reviewed=True, items=[item([1000, 200], category="nal")])
     corrected = Report.from_json(original.to_json())
     left, right = corrected.split_item(0, 1)
     errors = classify_errors(original, corrected)
@@ -202,7 +213,7 @@ def test_classify_split_not_added_deleted():
 
 
 def test_classify_errors():
-    original = Report("2026-11-27", items=[item([1000], category="nal")])
+    original = Report("2026-11-27", photo_reviewed=True, items=[item([1000], category="nal")])
     corrected = Report.from_json(original.to_json())
     corrected.set_term(0, 0, "1200")
     corrected.set_category(0, "beznal")

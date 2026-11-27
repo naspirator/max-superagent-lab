@@ -1,4 +1,4 @@
-# MAX FINANCE TEST — технический отчёт
+﻿# MAX FINANCE TEST — технический отчёт
 
 Дата: 27.11.2026  
 Исполнитель: DeepSeek Harness  
@@ -95,7 +95,7 @@ ChatGPT и согласование владельца — отдельные э
 - diff: `reports/changes.diff`
 - полный пакет для ревью: `review-package-3.tar.gz`
 - GitHub PR: https://github.com/naspirator/max-superagent-lab/pull/38
-  (ветка `review/max-finance-test-20261127`, коммит `ee1ec7a`)
+  (ветка `review/max-finance-test-20261127`, коммит `ff57aa6`)
 - В PROD ничего не коммитилось и не merge-илось.
 
 ---

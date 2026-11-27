@@ -133,6 +133,11 @@ async def test_end_to_end_photo_edit_confirm_without_prod(monkeypatch, tmp_path)
     draft = store.load_draft(1)
     assert draft.items[0].amount == Decimal("30800")
 
+    # Подтверждаем, что фотография сверена.
+    ack = FakeQuery(f"tt:{draft.nonce}:ackphoto")
+    await handlers.on_callback(ack)
+    draft = store.load_draft(1)
+
     # Добавляем вторую категорию, чтобы пройти проверку.
     confirm = FakeQuery(f"tt:{draft.nonce}:confirm")
     await handlers.on_callback(confirm)
@@ -181,7 +186,7 @@ async def test_ocr_failure_keeps_draft_and_allows_manual(monkeypatch, tmp_path):
         raise OcrError("Сервис распознавания недоступен: TimeoutError")
 
     monkeypatch.setattr(handlers_module, "recognize_ensemble", broken)
-    report = Report("2026-11-27", photo_sha="sha-error", photo_path=str(image), boundary=(0.5, 0.5), version=1)
+    report = Report("2026-11-27", photo_reviewed=True, photo_sha="sha-error", photo_path=str(image), boundary=(0.5, 0.5), version=1)
     store.save_draft(1, report)
     query = FakeQuery(f"tt:{report.nonce}:crop")
     await handlers.on_callback(query)
@@ -201,7 +206,7 @@ async def test_line_change_after_ocr_blocks_confirmation(monkeypatch, tmp_path):
     buffer = io.BytesIO()
     Image.new("RGB", (40, 40), "white").save(buffer, format="JPEG")
     image.write_bytes(buffer.getvalue())
-    report = Report("2026-11-27", photo_sha="sha-stale", photo_path=str(image),
+    report = Report("2026-11-27", photo_reviewed=True, photo_sha="sha-stale", photo_path=str(image),
                     boundary=(0.5, 0.5), version=1,
                     items=[Item([Decimal("1000")], category="nal")])
     store.save_draft(1, report)
@@ -215,7 +220,7 @@ async def test_line_change_after_ocr_blocks_confirmation(monkeypatch, tmp_path):
 
 def test_confirm_duplicate_is_rejected(tmp_path):
     store = make_store(tmp_path)
-    report = Report("2026-11-27", items=[Item([Decimal("1000")], category="nal")])
+    report = Report("2026-11-27", photo_reviewed=True, items=[Item([Decimal("1000")], category="nal")])
     store.record_confirmed(report, None, b"same", 1)
     with pytest.raises(ValueError):
         store.record_confirmed(report, None, b"same", 1)

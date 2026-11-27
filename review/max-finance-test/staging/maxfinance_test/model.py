@@ -133,6 +133,7 @@ class Report:
     ocr_snapshot: dict[str, Any] | None = None
     ocr_complete: bool = True
     ocr_stale: bool = False
+    photo_reviewed: bool = False
     debt_policy: str = "separate"
 
     # ---------- служебное ----------
@@ -187,6 +188,7 @@ class Report:
             "ocr_snapshot": self.ocr_snapshot,
             "ocr_complete": self.ocr_complete,
             "ocr_stale": self.ocr_stale,
+            "photo_reviewed": self.photo_reviewed,
             "debt_policy": self.debt_policy,
         }
         if include_history:
@@ -214,6 +216,7 @@ class Report:
             ocr_snapshot=data.get("ocr_snapshot"),
             ocr_complete=bool(data.get("ocr_complete", True)),
             ocr_stale=bool(data.get("ocr_stale", False)),
+            photo_reviewed=bool(data.get("photo_reviewed", False)),
             debt_policy=str(data.get("debt_policy", "separate")),
         )
         return report
@@ -303,6 +306,8 @@ class Report:
             raise ReportError("Неверная дата отчёта") from exc
         if selected > date.today():
             raise ReportError("Дата в будущем")
+        if not self.photo_reviewed:
+            raise ReportError("Сверьте фотографию и нажмите «Я сверил фото»")
         if not self.ocr_complete:
             raise ReportError("Сверьте фотографию и подтвердите полноту отчёта")
         if self.ocr_stale:

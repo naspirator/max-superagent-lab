@@ -68,7 +68,7 @@ def test_item_keyboard_exposes_every_edit(env):
 
 
 def test_terms_and_signs_keyboard(env):
-    report = Report("2026-11-27", items=[Item([Decimal("6000"), Decimal("1450")], ["+", "+"])])
+    report = Report("2026-11-27", photo_reviewed=True, items=[Item([Decimal("6000"), Decimal("1450")], ["+", "+"])])
     markup = ui.terms_keyboard(report, 0, report.nonce)
     datas = [b.callback_data for row in markup.inline_keyboard for b in row]
     assert any(":term:" in d and d.endswith(":0") for d in datas)

@@ -98,8 +98,8 @@ def items_text(report: Report, page: int, book: AliasBook, store=None) -> str:
         lines.append(f"Долги: {format_amount(totals['debts'])} ₽ — {totals['debt_note']}")
     if report.warnings:
         lines.extend(["", "⚠️ " + " | ".join(report.warnings)[:600]])
-    if not report.ocr_complete:
-        lines.append("⚠️ Полнота чтения не подтверждена. Сверь фото и нажми «Я сверил фото».")
+    if not report.photo_reviewed:
+        lines.append("⚠️ Сверь все строки с фотографией и нажми «Я сверил фото».")
     if report.ocr_stale:
         lines.append("⚠️ Линия изменена после распознавания. Распознай заново.")
     lines.extend(["", "Нажми позицию, чтобы изменить любые данные."])
@@ -121,7 +121,7 @@ def items_keyboard(report: Report, page: int, nonce: str) -> InlineKeyboardMarku
         nav.append(button("▶️", cbd(nonce, f"page:{page + 1}")))
     if nav:
         rows.append(nav)
-    if not report.ocr_complete:
+    if not report.photo_reviewed:
         rows.append([button("📷 Я сверил фото", cbd(nonce, "ackphoto"))])
     rows.extend([
         [button("➕ Добавить позицию", cbd(nonce, "add")), button("Σ Итоги", cbd(nonce, "totals"))],

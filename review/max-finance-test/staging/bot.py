@@ -599,6 +599,7 @@ async def main():
         dp.include_router(TEST_HANDLERS.router)
     except Exception as exc:
         TEST_HANDLERS=maxfinance_test.UnavailableTestMode(BASE)
+        dp.include_router(TEST_HANDLERS.router)
         print('TEST_MODE_INIT_ERROR:',repr(exc),flush=True)
     dp.include_router(reports_router);dp.include_router(router)
     try:await dp.start_polling(bot)

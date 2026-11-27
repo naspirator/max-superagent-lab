@@ -69,6 +69,10 @@ def merge_amounts(report: Report, old_positions) -> tuple[Report, int]:
     for item in report.items:
         if not (item.uncertain or item.amount < 0 or (len(item.terms) > 1)):
             continue
+        # Старый OCR не умеет минус: нельзя заменять выражение со знаками
+        # на положительную сумму.
+        if any(sign == "-" for sign in item.signs):
+            continue
         position = _best_old(item, old_positions)
         if position is None or id(position) in used:
             continue

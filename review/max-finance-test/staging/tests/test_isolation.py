@@ -96,7 +96,7 @@ async def test_confirm_writes_only_to_test_store(tmp_path):
     photo = b"photo-bytes"
     photo_path = tmp_path / "photo.jpg"
     photo_path.write_bytes(photo)
-    report = Report("2026-11-27", photo_sha=__import__("hashlib").sha256(photo).hexdigest(),
+    report = Report("2026-11-27", photo_reviewed=True, photo_sha=__import__("hashlib").sha256(photo).hexdigest(),
                     photo_path=str(photo_path), items=[
         Item([Decimal("1000")], category="nal"),
     ], version=1)
@@ -129,7 +129,7 @@ async def test_draft_and_line_survive_new_handler_instance(tmp_path):
     store = ModeStore(tmp_path / "test", prod_db=prod)
     store.initialize()
     store.set_setting("mode:1", "TEST")
-    report = Report("2026-11-27", photo_sha="abc", items=[Item([Decimal("1000")], category="nal")], version=1)
+    report = Report("2026-11-27", photo_reviewed=True, photo_sha="abc", items=[Item([Decimal("1000")], category="nal")], version=1)
     store.save_draft(1, report)
     store.save_line("abc", (0.61, 0.61))
     again = ModeHandlers(ModeStore(store.root), client=None, admin_id=1)
