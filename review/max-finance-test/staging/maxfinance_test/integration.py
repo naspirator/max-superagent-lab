@@ -32,6 +32,9 @@ class UnavailableTestMode:
         self.router.callback_query.register(
             self.blocked_callback, F.data.startswith("v3:") | F.data.startswith("st:")
         )
+        # Свободный текст тоже не должен доходить до WORK: в рабочем режиме
+        # он может изменить сотрудников или состояние черновика.
+        self.router.message.register(self.blocked_text, F.text)
 
     def is_test(self, user_id: int) -> bool:
         path = self.root / TEST_DB_NAME
@@ -68,6 +71,14 @@ class UnavailableTestMode:
         await message.answer(
             "⛔ Тестовый режим временно недоступен. Рабочая команда отключена; "
             "рабочие данные и Google-таблица не изменяются."
+        )
+
+    async def blocked_text(self, message: Message) -> None:
+        if not message.from_user or not self.is_test(message.from_user.id):
+            raise SkipHandler
+        await message.answer(
+            "⛔ Тестовый режим временно недоступен. Текстовый ввод отключён; "
+            "рабочие данные не изменяются."
         )
 
     async def blocked_callback(self, query) -> None:

@@ -3,6 +3,7 @@
 Эти проверки воспроизводят конкретные сценарии, которые раньше проходили
 неверно. Они не заменяют независимую приёмку, но фиксируют исправления.
 """
+import asyncio
 from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
@@ -47,6 +48,16 @@ class FakeQuery:
         return None
 
 
+class FakeTextMessage:
+    def __init__(self, uid):
+        self.from_user = SimpleNamespace(id=uid)
+        self.answers = []
+
+    async def answer(self, text, **kwargs):
+        self.answers.append(text)
+        return self
+
+
 def make_store(tmp_path: Path) -> ModeStore:
     store = ModeStore(tmp_path / "test")
     store.initialize()
@@ -74,6 +85,36 @@ def test_unavailable_guard_allows_work_only_if_test_store_never_existed(tmp_path
     # команды не блокируются.
     guard = UnavailableTestMode(tmp_path / "clean-install")
     assert guard.is_test(1) is False
+
+
+def test_unavailable_mode_blocks_free_text_for_test_user(tmp_path):
+    from aiogram.dispatcher.event.bases import SkipHandler
+
+    root = tmp_path / "test-mode"
+    store = ModeStore(root)
+    store.initialize()
+    store.set_setting("mode:1", "TEST")
+    guard = UnavailableTestMode(tmp_path)
+
+    message = FakeTextMessage(1)
+    asyncio.run(guard.blocked_text(message))
+    assert message.answers and "отключён" in message.answers[0]
+
+    # Пользователь без режима TEST — обычный рабочий пользователь.
+    with pytest.raises(SkipHandler):
+        asyncio.run(guard.blocked_text(FakeTextMessage(2)))
+
+    # Если база исчезла, режим неизвестен: блокируются все.
+    (root / "test_finance.db").rename(root / "moved.db")
+    unknown = UnavailableTestMode(tmp_path)
+    stranger = FakeTextMessage(2)
+    asyncio.run(unknown.blocked_text(stranger))
+    assert stranger.answers
+
+    # Если тестового хранилища нет вовсе, текст проходит в рабочий режим.
+    clean = UnavailableTestMode(tmp_path / "clean-install")
+    with pytest.raises(SkipHandler):
+        asyncio.run(clean.blocked_text(FakeTextMessage(3)))
 
 
 def test_numeric_item_id_is_not_treated_as_index(tmp_path):

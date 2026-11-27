@@ -16,12 +16,15 @@ OWNER_APPROVED="${OWNER_APPROVED:-0}"
 SOURCE="${SOURCE:-$HOME/max-finance-test-deploy}"
 PROJECT="${PROJECT:-/root/max-finance-stage}"
 SERVICE="${SERVICE:-max-finance}"
-SNAPSHOT_ROOT="${SNAPSHOT_ROOT:-/root}"
-SERVICE_DIR="${SERVICE_DIR:-${PREFIX:-/data/data/com.termux/files/usr}/var/service/$SERVICE}"
+PREFIX_DIR="${PREFIX:-/data/data/com.termux/files/usr}"
+SV_BIN="${SV_BIN:-$PREFIX_DIR/bin/sv}"
+SERVICE_DIR="${SERVICE_DIR:-$PREFIX_DIR/var/service/$SERVICE}"
 PYTHON="$PROJECT/.venv/bin/python"
 
 [ -d "$SOURCE/maxfinance_test" ] || { echo "Нет пакета: $SOURCE"; exit 2; }
 [ -f "$SOURCE/bot.py" ] || { echo "Нет bot.py в пакете"; exit 2; }
+[ -x "$SV_BIN" ] || { echo "Нет sv: $SV_BIN"; exit 2; }
+[ -d "$SERVICE_DIR" ] || { echo "Нет службы: $SERVICE_DIR"; exit 2; }
 proot-distro login ubuntu -- test -x "$PYTHON" || { echo "Нет python проекта: $PYTHON"; exit 2; }
 
 # Проверка синтаксиса и импорта выполняется тем же интерпретатором и в том
@@ -55,21 +58,56 @@ STAMP=$(date +%Y%m%d-%H%M%S)
 BACKUP_DIR="$HOME/max-server/transfer"
 PRE="$BACKUP_DIR/pre-install-$STAMP.tar.gz"
 mkdir -p "$BACKUP_DIR"
-echo "=== Снимок до установки: $PRE ==="
-proot-distro login ubuntu -- tar czf "$PRE" -C "$SNAPSHOT_ROOT" max-finance-stage
+
+echo "=== Снимок кода до установки: $PRE ==="
+# Снимок только заменяемых файлов. База, .venv и остальные рабочие данные
+# не копируются и не откатываются: откат базы без отдельного подтверждения
+# запрещён (docs/ROLLBACK.md).
+if ! proot-distro login ubuntu -- sh -s "$PROJECT" "$PRE" <<'INNER_SNAP'
+set -eu
+project="$1"
+pre="$2"
+cd "$project"
+if [ -e maxfinance_test ]; then
+    tar czf "$pre" bot.py maxfinance_test
+else
+    tar czf "$pre" bot.py
+fi
+INNER_SNAP
+then
+    rm -f "$PRE" "$PRE.sha256"
+    echo "ОШИБКА: не удалось создать снимок кода. Установка не начата."
+    exit 2
+fi
 sha256sum "$PRE" > "$PRE.sha256"
+if ! sha256sum -c "$PRE.sha256" >/dev/null; then
+    rm -f "$PRE" "$PRE.sha256"
+    echo "ОШИБКА: SHA-256 снимка не совпадает. Установка не начата."
+    exit 2
+fi
 proot-distro login ubuntu -- tar tzf "$PRE" >/dev/null
 
 rollback() {
-    echo "=== ОТКАТ: восстанавливаю снимок $PRE ==="
-    if ! proot-distro login ubuntu -- tar tzf "$PRE" >/dev/null 2>&1; then
-        echo "ОШИБКА: снимок нечитаем, автоматический откат невозможен: $PRE"
-        return 1
+    echo "=== ОТКАТ: восстанавливаю bot.py и maxfinance_test из $PRE ==="
+    if ! sha256sum -c "$PRE.sha256" >/dev/null 2>&1; then
+        echo "ОШИБКА: SHA-256 снимка не совпадает, автоматический откат невозможен: $PRE"
+        return 0
     fi
-    proot-distro login ubuntu -- sh -c "rm -rf '$SNAPSHOT_ROOT/max-finance-stage' && tar xzf '$PRE' -C '$SNAPSHOT_ROOT'"
-    sv restart "$SERVICE_DIR" || true
+    if ! proot-distro login ubuntu -- sh -s "$PROJECT" "$PRE" <<'INNER_ROLLBACK'
+set -eu
+project="$1"
+pre="$2"
+cd "$project"
+rm -rf maxfinance_test
+tar xzf "$pre" -C "$project"
+INNER_ROLLBACK
+    then
+        echo "ОШИБКА: не удалось восстановить код из снимка: $PRE"
+        return 0
+    fi
+    "$SV_BIN" restart "$SERVICE_DIR" || true
     sleep 6
-    sv status "$SERVICE_DIR" || true
+    "$SV_BIN" status "$SERVICE_DIR" || true
 }
 
 echo "=== Установка файлов ==="
@@ -101,26 +139,37 @@ mv "$incoming/maxfinance_test" "$project/maxfinance_test"
 cp "$incoming/bot.py" "$project/.bot.py.new"
 mv "$project/.bot.py.new" "$project/bot.py"
 rm -rf "$old"
+rm -rf "$project/maxfinance_test/__pycache__"
 echo "TEST_PACKAGE_SWAPPED"
 INNER_INSTALL
 then
-    echo "ОШИБКА установки файлов. Рабочие файлы восстанавливаются из снимка."
+    echo "ОШИБКА установки файлов. Рабочий код восстанавливается из снимка."
     rollback
     exit 3
 fi
 
 echo "=== Перезапуск службы ==="
-sv restart "$SERVICE_DIR" || true
+"$SV_BIN" restart "$SERVICE_DIR" || true
 sleep 6
-STATUS=$(sv status "$SERVICE_DIR" 2>&1 || true)
-echo "$STATUS"
-case "$STATUS" in
+STATUS1=$("$SV_BIN" status "$SERVICE_DIR" 2>&1 || true)
+echo "$STATUS1"
+case "$STATUS1" in
     run:*) ;;
     *)
-        echo "ОШИБКА: служба $SERVICE не запустилась. Выполняю откат."
+        echo "ОШИБКА: служба $SERVICE не запустилась. Выполняю откат кода."
         rollback
         exit 4
         ;;
 esac
+PID1=$(printf '%s\n' "$STATUS1" | sed -n 's/.*(pid \([0-9][0-9]*\)).*/\1/p' | head -n 1)
+sleep 4
+STATUS2=$("$SV_BIN" status "$SERVICE_DIR" 2>&1 || true)
+echo "$STATUS2"
+PID2=$(printf '%s\n' "$STATUS2" | sed -n 's/.*(pid \([0-9][0-9]*\)).*/\1/p' | head -n 1)
+if [ -z "$PID1" ] || [ "$PID1" != "$PID2" ]; then
+    echo "ОШИБКА: служба $SERVICE перезапускается (crash-loop). Выполняю откат кода."
+    rollback
+    exit 4
+fi
 
 echo "INSTALLED. Проверь лог: tail -n 100 \$PREFIX/var/log/sv/max-finance/current"

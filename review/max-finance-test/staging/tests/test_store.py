@@ -218,7 +218,7 @@ def test_verify_backup_requires_photo_from_database(env, tmp_path):
     manifest["files"] = {key: value for key, value in manifest["files"].items() if not key.endswith(photo_name)}
     manifest_path.write_text(__import__("json").dumps(manifest), encoding="utf-8")
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="нет фото примера"):
         ModeStore.verify_backup(backup)
 
 
@@ -241,3 +241,13 @@ def test_restore_rewrites_photo_path_in_undo_history(env, tmp_path):
     for snapshot in draft.history:
         entry = __import__("json").loads(snapshot)
         assert entry["photo_path"].startswith(prefix)
+
+
+def test_backup_restore_keeps_mode_markers(env, tmp_path):
+    store, _ = env
+    store.set_setting("mode:1", "TEST")
+    assert store.is_test_marked(1)
+    backup = store.backup(tmp_path / "backup-marker")
+    restored = ModeStore.restore(backup, tmp_path / "restored-marker")
+    # Маркер fail-closed должен переживать backup/restore.
+    assert restored.is_test_marked(1)

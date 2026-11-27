@@ -433,6 +433,9 @@ class ModeStore:
             shutil.copytree(self.photos_dir, photos)
         if self.input_dir.is_dir():
             shutil.copytree(self.input_dir, dest / "input")
+        # Маркеры режима переживают потерю SQLite и должны попадать в копию.
+        if (self.root / "active").is_dir():
+            shutil.copytree(self.root / "active", dest / "active")
         manifest = {
             "created_at": _now(),
             "schema_version": SCHEMA_VERSION,
@@ -481,6 +484,8 @@ class ModeStore:
             shutil.copytree(source / "confirmed", dest / "confirmed")
         if (source / "input").is_dir():
             shutil.copytree(source / "input", dest / "input")
+        if (source / "active").is_dir():
+            shutil.copytree(source / "active", dest / "active")
         with closing(sqlite3.connect(dest / TEST_DB_NAME)) as db:
             if db.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                 raise ValueError("Восстановленная база повреждена")
