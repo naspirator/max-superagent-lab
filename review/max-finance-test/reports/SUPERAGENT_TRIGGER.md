@@ -1,8 +1,8 @@
-# Как запустить независимую проверку Superagent
+﻿# Как запустить независимую проверку Superagent
 
 Superagent работает: WSL-дистрибутив `Ubuntu-Superagent`, панель
 `http://127.0.0.1:3082`, источник GitHub включён. PR #38 создан, вершина
-`4c83891` (код — с `cad6262`, дальше только CI и отчёты).
+`cad6262` (последний коммит с кодом; дальше только CI и отчёты).
 
 ## Почему проверка не запустилась сама
 
@@ -32,14 +32,14 @@ Superagent работает: WSL-дистрибутив `Ubuntu-Superagent`, п�
 **Заголовок:**
 
 ```text
-MAX Review: PR #38 @4c83891829fc
+MAX Review: PR #38 @cad6262757b5
 ```
 
 **Текст:**
 
 ```text
 @max535max You are MAX Reviewer, an independent reviewer. Do not modify files, push, approve or merge.
-Review pull request #38 at commit 4c83891829fc39d6723cedd539d8c4d7d464b098 in naspirator/max-superagent-lab against main.
+Review pull request #38 at commit cad6262757b507a88bb031080e882b3958822c3b (last code commit; everything after it is reports/CI only - verify with: git log --name-only cad6262..origin/review/max-finance-test-20261127) in naspirator/max-superagent-lab against main.
 
 Original task:
 Модернизировать действующий проект MAX FINANCE (Telegram-бот распознавания
