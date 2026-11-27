@@ -1,10 +1,10 @@
 {
   "holdout": 5,
-  "old_amount_recall": 0.897,
-  "new_amount_recall": 0.897,
-  "new_confirmed_amount_recall": 0.724,
-  "employee_accuracy": 0.526,
-  "category_accuracy": 0.828,
+  "old_amount_recall": 0.862,
+  "new_amount_recall": 0.828,
+  "new_confirmed_amount_recall": 0.69,
+  "employee_accuracy": 0.421,
+  "category_accuracy": 0.759,
   "exact_reports_old": 0,
   "exact_reports_new": 0,
   "rows": [
@@ -21,7 +21,6 @@
         0,
         4000,
         4000,
-        4500,
         9200,
         13700,
         16550,
@@ -33,29 +32,27 @@
         4000,
         4500,
         9200,
-        16550,
         17200,
         36800
       ],
-      "old_match": 6,
+      "old_match": 5,
       "new_match": 6,
       "confirmed_match": 5,
       "expected_total": 6,
-      "old_actual": 9,
-      "new_actual": 7,
+      "old_actual": 8,
+      "new_actual": 6,
       "employee_match": 3,
       "employee_total": 4,
       "category_match": 6,
       "category_total": 6,
       "exact_old": false,
       "exact_new": false,
-      "old_time": 11.8,
-      "new_time": 13.6,
+      "old_time": 9.8,
+      "new_time": 13.4,
       "new_warnings": [
         "Запись 2: числа после «=» не прибавлены, проверьте пояснение",
-        "Запись 3: категория не определена — назначьте вручную",
-        "Запись 7: видно исправление — сверьте с фото",
-        "Запись 7: числа после «=» не прибавлены, проверьте пояснение"
+        "Запись 6: видно исправление — сверьте с фото",
+        "Запись 6: числа после «=» не прибавлены, проверьте пояснение"
       ],
       "old_warnings": [
         "Есть неразборчивая сумма; исправьте её вручную.",
@@ -93,31 +90,31 @@
         84300
       ],
       "new_amounts": [
-        700,
         4000,
         5000,
         6000,
         11500,
-        19700,
+        13700,
         34700,
+        49500,
         50200,
         76400,
         84300
       ],
       "old_match": 7,
-      "new_match": 7,
-      "confirmed_match": 6,
+      "new_match": 5,
+      "confirmed_match": 5,
       "expected_total": 7,
       "old_actual": 17,
       "new_actual": 10,
-      "employee_match": 4,
+      "employee_match": 2,
       "employee_total": 5,
-      "category_match": 7,
+      "category_match": 5,
       "category_total": 7,
       "exact_old": false,
       "exact_new": false,
-      "old_time": 19.2,
-      "new_time": 21.0,
+      "old_time": 18.9,
+      "new_time": 33.8,
       "new_warnings": [
         "Запись 3: категория не определена — назначьте вручную",
         "Запись 4: числа после «=» не прибавлены, проверьте пояснение",
@@ -125,9 +122,7 @@
         "Запись 10: видно исправление — сверьте с фото",
         "Запись 10: числа после «=» не прибавлены, проверьте пояснение"
       ],
-      "old_warnings": [
-        "Строка содержит неясные знаки: проверьте каждое число вручную."
-      ]
+      "old_warnings": []
     },
     {
       "image": "20261123_211146.jpg",
@@ -167,8 +162,8 @@
       "category_total": 5,
       "exact_old": false,
       "exact_new": false,
-      "old_time": 9.1,
-      "new_time": 9.8,
+      "old_time": 9.2,
+      "new_time": 10.7,
       "new_warnings": [
         "Запись 1: числа после «=» не прибавлены, проверьте пояснение",
         "Запись 5: видно исправление — сверьте с фото"
@@ -214,8 +209,8 @@
       "category_total": 6,
       "exact_old": false,
       "exact_new": false,
-      "old_time": 8.8,
-      "new_time": 9.6,
+      "old_time": 8.7,
+      "new_time": 10.5,
       "new_warnings": [
         "Запись 1: числа после «=» не прибавлены, проверьте пояснение",
         "Запись 5: видно исправление — сверьте с фото",
@@ -263,12 +258,13 @@
       "category_total": 5,
       "exact_old": false,
       "exact_new": false,
-      "old_time": 7.1,
-      "new_time": 12.1,
+      "old_time": 9.8,
+      "new_time": 14.6,
       "new_warnings": [
         "Запись 2: категория не определена — назначьте вручную",
         "Запись 2: зачёркнутая запись — подтвердите, учитывать её или исключить",
         "Запись 3: неясные числа (Недопустимый знак)",
+        "Запись 4: категория не определена — назначьте вручную",
         "Запись 7: видно исправление — сверьте с фото",
         "Запись 7: числа после «=» не прибавлены, проверьте пояснение",
         "Суммы сверены со старым OCR: 1 поз."
