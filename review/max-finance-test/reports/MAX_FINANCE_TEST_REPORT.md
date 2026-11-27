@@ -95,7 +95,7 @@ ChatGPT и согласование владельца — отдельные э
 - diff: `reports/changes.diff`
 - полный пакет для ревью: `review-package-11.tar.gz`
 - GitHub PR: https://github.com/naspirator/max-superagent-lab/pull/38
-  (ветка `review/max-finance-test-20261127`, коммит `5feb2f6`)
+  (ветка `review/max-finance-test-20261127`; актуальный HEAD — в PR)
 - В PROD ничего не коммитилось и не merge-илось.
 
 ---
@@ -160,12 +160,22 @@ Superagent — существующий сервис `dsh-superagent` в WSL-д�
 `ready`.
 
 Создана площадка ревью: PR #38 в `naspirator/max-superagent-lab`, Issue #39.
-**Блокер:** GitHub-источник Superagent по своему коду пропускает элементы,
-автор которых совпадает с логином агента (`if sameName(item.user.login, login)
-continue`). Доступный GitHub-аккаунт `max535max` одновременно является агентом,
-поэтому self-authored Issue #39 не становится тикетом. Независимый отзыв
-Superagent фактически не получен; это зафиксировано, а не заменено собственной
-оценкой.
+**Блокер (проверено по коду и живым настройкам):**
+
+- GitHub-источник пропускает элементы, автор которых совпадает с логином
+  агента (`src/sources/github.ts:227`), а `github-trigger.ts:63` ставит
+  self-authored `human=false`;
+- в источнике включён только поток Issues (`observeIssues: true`);
+  `observeComments: false`, поэтому комментарий к Issue #39 не является
+  триггером;
+- поток Issues стартовал в `2026-11-27T16:08:34Z`, а Issue #39 создан в
+  `16:07:56Z` — до старта потока, поэтому он уже не считается новым;
+- политика допускает `naspirator` и `max535max`, но второй аккаунт — это сам
+  агент.
+
+Следовательно, нужен **новый Issue**, созданный человеком от `naspirator`.
+Инструкция: `reports/SUPERAGENT_TRIGGER.md`. Независимый отзыв Superagent
+фактически не получен; это зафиксировано, а не заменено собственной оценкой.
 
 ## 7.1. Независимая приёмка ChatGPT Desktop
 

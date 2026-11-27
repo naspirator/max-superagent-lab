@@ -1,39 +1,59 @@
 # Как запустить независимую проверку Superagent
 
 Superagent уже работает: WSL-дистрибутив `Ubuntu-Superagent`, панель
-`http://127.0.0.1:3082`, источник GitHub включён. PR #38 и Issue #39 созданы.
+`http://127.0.0.1:3082`, источник GitHub включён. PR #38 создан.
 
 ## Почему проверка не запустилась сама
 
-В коде GitHub-источника Superagent есть защита от самозапуска:
+Проверены фактические настройки и код источника GitHub, а не только
+предположения:
 
-- `src/sources/github.ts:227` — элементы, автор которых совпадает с логином
-  агента, пропускаются (`if sameName(item.user.login, login) continue`);
-- `src/sources/github-trigger.ts:63` — для self-authored ставится `human=false`.
+1. В политике разрешены два аккаунта:
+   `{"github":{"allowed":[{"id":"naspirator"},{"id":"max535max"}]}}`.
+2. Включён только поток Issues:
+   `observeIssues: true`, `observePulls: false`, `observeComments: false`.
+   Значит, комментарии к Issue/PR **не** создают триггер; новый Issue — создаёт.
+3. Поток Issues стартовал `2026-11-27T16:08:34Z`, а Issue #39 создан
+   `16:07:56Z` — то есть **до** старта потока и уже не считается новым.
+4. `src/sources/github.ts:227` пропускает элементы, автор которых совпадает с
+   логином агента (`if sameName(item.user.login, login) continue`), а
+   `github-trigger.ts:63` ставит для self-authored `human=false`.
 
-Единственный доступный GitHub-аккаунт — `max535max`, и он же является агентом.
-Поэтому комментарий от него не создаёт «человеческий» триггер.
+Итог: комментарий в Issue #39 не сработает ни как новый Issue, ни как
+человеческий триггер. Нужен **новый Issue**, созданный человеком.
 
 ## Что нужно сделать человеку
 
-Достаточно одного комментария от аккаунта, который **не** `max535max` и
-разрешён в политике Superagent (`naspirator` или добавленный вручную).
+Открыть новый Issue в репозитории:
 
-В Issue:
+https://github.com/naspirator/max-superagent-lab/issues/new
 
-https://github.com/naspirator/max-superagent-lab/issues/39
+От аккаунта `naspirator` (или другого аккаунта, добавленного в
+`policy.sources.github.allowed`), например:
 
-оставить комментарий:
+Заголовок:
 
 ```text
-@max535max please review PR #38 independently. Do not change the PR.
+Review PR #38 (MAX FINANCE TEST) independently
 ```
 
-Либо, если удобнее, в самом PR:
+Текст:
 
-https://github.com/naspirator/max-superagent-lab/pull/38
+```text
+@max535max please review PR #38 independently. Check the code, tests and the
+B01/B03-B05/M03/M12-M13 fixes. Do not change the PR and do not publish a public
+review.
+```
 
-Комментарий должен быть именно от человека, а не от агента.
+Новый Issue будет создан после старта потока Issues, поэтому Superagent его
+увидит и создаст тикет.
+
+## Альтернатива: включить комментарии
+
+В панели Superagent можно включить `observeComments` (и/или `observePulls`) в
+настройках источника GitHub, после чего комментарий человека в существующем
+Issue/PR тоже станет триггером. Это изменение конфигурации Superagent, а не
+PROD-бота MAX FINANCE.
 
 ## Что произойдёт дальше
 
@@ -41,14 +61,9 @@ https://github.com/naspirator/max-superagent-lab/pull/38
 2. Проверит код, тесты и исправления B01, B03–B05, M03, M12–M13.
 3. Оставит отзыв в Issue/PR или вернёт результат в свою панель.
 
-## Если второго аккаунта нет
-
-Можно добавить в политику Superagent другой человеческий аккаунт GitHub
-(например, аккаунт владельца) и оставить комментарий от него. Это изменение
-конфигурации самого Superagent, а не PROD-бота; оно не затрагивает MAX FINANCE.
-
 ## Чего делать нельзя
 
 - комментировать от `max535max` и ждать human-триггера — он будет пропущен;
+- ждать триггер от комментария в Issue #39 при выключенном `observeComments`;
 - выдавать собственную проверку за Superagent-ревью;
 - вносить изменения в PROD до APPROVE и согласования владельца.
