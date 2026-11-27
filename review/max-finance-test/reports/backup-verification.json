@@ -1,0 +1,48 @@
+{
+  "archive": "E:\\MAX-FINANCE-TEST\\backups\\max-finance-prod-20261127-182625.tar.gz",
+  "archive_sha256": "c569bf044316754cfdb312885c077d540b440b70fedfcd9919bb7ffab1fe7824",
+  "checks": {
+    "archive_contains_project": true,
+    "required_files_missing": [],
+    "file_hashes": {
+      "bot.py": {
+        "sha256": "48fbb5d6852bf5f48741447396739dfc02c9d9f4e5752193061fd74f4dccc740",
+        "matches_live_copy": true
+      },
+      "finance_v3.py": {
+        "sha256": "59bdd3e8692aa5f7dc8e3dfd8d4f69c08f94cb2a1bf2b28fce525e9d10c72a5f",
+        "matches_live_copy": true
+      },
+      "ocr_v3.py": {
+        "sha256": "91be4a84f1c16565678cb5eae459d1b3c03aab51760024a814e1b516c9817d11",
+        "matches_live_copy": true
+      },
+      "reports.py": {
+        "sha256": "584b95663386ec32a301280be05cb3fe09c759a209f073acd07302d01531e660",
+        "matches_live_copy": true
+      },
+      "sheets_v3.py": {
+        "sha256": "2e4a514eaf347961e197637329dcab03063548acde98fba9eccab44905063341",
+        "matches_live_copy": true
+      },
+      "finance.db": {
+        "sha256": "438ecc57a92cdba7541fc1d726f27d0fcbc865429a3872ba788a525d01bf7f06",
+        "matches_live_copy": true
+      },
+      ".env": {
+        "sha256": "636f8baaf93d651b45ee4c559dff2e81a38ee8d5238ce95b338daf708f6d7be9",
+        "matches_live_copy": true
+      },
+      "google_credentials.json": {
+        "sha256": "6ce93056e321214f4718c7e1f2fccff28f450ce5f6a8b2117550e1dbb24f8852",
+        "matches_live_copy": true
+      }
+    },
+    "database_integrity": "ok",
+    "report_count": 37,
+    "staff_count": 9,
+    "rollback_code_restored": true,
+    "rollback_db_untouched": true,
+    "temporary_dir": "C:\\Users\\Max\\AppData\\Local\\Temp\\maxfinance-rollback-ya2y21mt"
+  }
+}

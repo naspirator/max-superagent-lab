@@ -1,0 +1,45 @@
+﻿diff --git "a/E:\\MAX-FINANCE-TEST\\prod-src\\max-finance-stage\\bot.py" "b/E:\\MAX-FINANCE-TEST\\staging\\bot.py"
+index 73fbf2a..6719d5d 100644
+--- "a/E:\\MAX-FINANCE-TEST\\prod-src\\max-finance-stage\\bot.py"
++++ "b/E:\\MAX-FINANCE-TEST\\staging\\bot.py"
+@@ -10,6 +10,7 @@ from aiogram import Bot,Dispatcher,F,Router
+ from aiogram.filters import Command,CommandStart
+ from aiogram.types import Message,CallbackQuery,InlineKeyboardButton,InlineKeyboardMarkup,BufferedInputFile,InputMediaPhoto
+ import finance_v3 as f
++import maxfinance_test
+ import ocr_v3
+ import sheets_v3
+ from reports import reports_router
+@@ -23,6 +24,7 @@ store=f.Store(DATABASE)
+ client=AsyncOpenAI(api_key=API_KEY or 'not-configured',base_url='https://api.vsegpt.ru/v1',timeout=180,max_retries=0)
+ router=Router();drafts={};editing={};busy=set();saving=set();staff_sessions={}
+ db_lock=asyncio.Lock();sheet_lock=asyncio.Lock()
++TEST_HANDLERS=None
+ LABELS={'beznal':'Безнал','nal':'Нал','itog':'Итог','employee':'Сотрудник','debt':'Долг','ignore':'Не учитывать',None:'Не назначено'}
+ SOURCES={'beznal':'Безнал','nal':'Нал','unknown':'Не указан'}
+ 
+@@ -225,6 +227,7 @@ async def manual_sync(message:Message):
+         await message.answer('Не удалось обновить Google. Локальная база сохранена; повтори /sync.')
+ 
+ async def process_photo(message,bot,file):
++    if TEST_HANDLERS is not None and await TEST_HANDLERS.handle_photo(message,bot,file):return
+     if not allowed(message):return
+     uid=message.from_user.id
+     if uid in busy or uid in drafts:
+@@ -581,7 +584,15 @@ async def main():
+     if os.getenv('FINANCE_ALLOW_POLLING')!='1':raise RuntimeError('Запуск заблокирован до отдельного разрешения пользователя')
+     if not TOKEN or not API_KEY or not ADMIN_ID or not SHEET_ID:raise RuntimeError('Не заполнены настройки бота')
+     store.initialize()
+-    bot=Bot(token=TOKEN);dp=Dispatcher();dp.include_router(reports_router);dp.include_router(router)
++    bot=Bot(token=TOKEN);dp=Dispatcher()
++    global TEST_HANDLERS
++    try:
++        TEST_HANDLERS=maxfinance_test.create_test_handlers(BASE,DATABASE,SHEET_ID,client,ADMIN_ID)
++        dp.include_router(TEST_HANDLERS.router)
++    except Exception as exc:
++        TEST_HANDLERS=None
++        print('TEST_MODE_INIT_ERROR:',repr(exc),flush=True)
++    dp.include_router(reports_router);dp.include_router(router)
+     try:await dp.start_polling(bot)
+     finally:await bot.session.close();await client.close()
+ 
