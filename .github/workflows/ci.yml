@@ -83,7 +83,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m pytest tests tests_baseline -q 2>&1 | tee ci-results/pytest.log
+          python -m pytest tests tests_baseline -o addopts="" \
+            --junitxml=ci-results/pytest.xml 2>&1 | tee ci-results/pytest.log
 
       - name: Negative control
         shell: bash
