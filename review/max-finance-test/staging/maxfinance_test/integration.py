@@ -39,7 +39,12 @@ class UnavailableTestMode:
         if sentinel.is_file():
             return True
         if not path.is_file():
-            return False
+            # Тестовое хранилище уже создавалось, но база исчезла: режим
+            # пользователя неизвестен. Рабочие операции в таком состоянии
+            # запрещены (fail closed), пока администратор не восстановит базу.
+            # Если каталога тестового режима нет вовсе, режим ни разу не
+            # включался и рабочая обработка разрешена.
+            return self.root.is_dir()
         try:
             with closing(sqlite3.connect(f"file:{path}?mode=ro", uri=True)) as db:
                 row = db.execute("SELECT value FROM settings WHERE key=?", (f"mode:{int(user_id)}",)).fetchone()

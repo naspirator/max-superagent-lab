@@ -198,3 +198,46 @@ def test_export_examples(env, tmp_path):
     store.record_confirmed(report, None, b"photo", 1)
     archive = store.export_examples(tmp_path / "export.zip")
     assert archive.is_file() and archive.stat().st_size > 0
+
+
+
+def test_verify_backup_requires_photo_from_database(env, tmp_path):
+    store, _ = env
+    report = Report("2026-11-27", photo_reviewed=True,
+                    items=[Item([Decimal("1000")], category="nal")])
+    store.record_confirmed(report, None, b"photo", 1)
+    backup = store.backup(tmp_path / "backup-photo")
+
+    # Воспроизводим копию без фото примера и без записи о нём в манифесте.
+    manifest_path = backup / "manifest.json"
+    manifest = __import__("json").loads(manifest_path.read_text(encoding="utf-8"))
+    connection = __import__("sqlite3").connect(backup / "test_finance.db")
+    (photo_name,) = connection.execute("SELECT photo_path FROM examples").fetchone()
+    connection.close()
+    (backup / "confirmed" / photo_name).unlink()
+    manifest["files"] = {key: value for key, value in manifest["files"].items() if not key.endswith(photo_name)}
+    manifest_path.write_text(__import__("json").dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError):
+        ModeStore.verify_backup(backup)
+
+
+def test_restore_rewrites_photo_path_in_undo_history(env, tmp_path):
+    store, _ = env
+    photo = store.input_dir / "draft-photo.jpg"
+    photo.write_bytes(b"draft-photo")
+    report = Report("2026-11-27", photo_reviewed=True, photo_path=str(photo),
+                    items=[Item([Decimal("1000")], category="nal")], version=1)
+    store.save_draft(1, report)
+    report.set_terms(0, [Decimal("1200")], ["+"])
+    store.save_draft(1, report)
+
+    backup = store.backup(tmp_path / "backup-undo")
+    restored = ModeStore.restore(backup, tmp_path / "restored-undo")
+    draft = restored.load_draft(1)
+    prefix = str(restored.input_dir)
+    assert draft.photo_path.startswith(prefix)
+    assert draft.history
+    for snapshot in draft.history:
+        entry = __import__("json").loads(snapshot)
+        assert entry["photo_path"].startswith(prefix)

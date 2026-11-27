@@ -135,7 +135,8 @@ async def test_unavailable_mode_stays_closed_if_test_db_moves(tmp_path):
     (root / "test_finance.db").rename(root / "moved.db")
     guard = UnavailableTestMode(tmp_path)
     assert guard.is_test(1) is True
-    assert guard.is_test(2) is False
+    # Пользователь без маркера тоже блокируется: режим неизвестен.
+    assert guard.is_test(2) is True
 
 
 @pytest.mark.asyncio

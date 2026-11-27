@@ -1,4 +1,4 @@
-﻿"""Регрессии по замечаниям третьего цикла ChatGPT.
+"""Регрессии по замечаниям третьего цикла ChatGPT.
 
 Эти проверки воспроизводят конкретные сценарии, которые раньше проходили
 неверно. Они не заменяют независимую приёмку, но фиксируют исправления.
@@ -64,7 +64,16 @@ def test_mode_marker_is_written_by_set_setting_and_survives_db_loss(tmp_path):
     (root / "test_finance.db").rename(root / "moved.db")
     guard = UnavailableTestMode(tmp_path)
     assert guard.is_test(1) is True
-    assert guard.is_test(2) is False
+    # Маркера нет, но тестовое хранилище существовало: режим неизвестен,
+    # поэтому рабочая обработка тоже запрещена.
+    assert guard.is_test(2) is True
+
+
+def test_unavailable_guard_allows_work_only_if_test_store_never_existed(tmp_path):
+    # Каталога тестового режима нет: режим никогда не включался, рабочие
+    # команды не блокируются.
+    guard = UnavailableTestMode(tmp_path / "clean-install")
+    assert guard.is_test(1) is False
 
 
 def test_numeric_item_id_is_not_treated_as_index(tmp_path):

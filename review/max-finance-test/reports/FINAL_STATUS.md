@@ -15,8 +15,8 @@
 - Линия по SHA фото, словарь П/Р/R/В/V/Т/Д/Л/ДИМ, база подтверждённых
   примеров, backup/restore.
 - Fail-closed изоляция TEST, блокировка `/sync` и рабочих callback.
-- 94 теста нового режима + 7 baseline, 0 failures.
-  `reports/tests-after-gapfix.txt`, `reports/baseline-after-gapfix.txt`.
+- 98 тестов нового режима + 7 baseline, 0 failures.
+  `reports/tests-round2.txt`, `reports/baseline-round2.txt`.
 - Независимая проверка ChatGPT Desktop: три цикла. Цикл 1 — **REVISE**
   (8 BLOCKER, 19 MAJOR). Цикл 2 — **REVISE** (B01, B03, B04 и др.). Цикл 3 —
   **REVISE** (OCR −500→+500, B01 при отсутствии файла тестовой БД, ошибка
@@ -44,6 +44,26 @@
 Добавлены 5 регрессионных тестов `tests/test_cycle3_regressions.py`.
 Эти изменения **не проходили** независимую проверку ChatGPT — вердикта по ним
 нет.
+
+### Раунд 2: дополнительные исправления и проверка установщика
+
+1. **Неизвестный режим при потере БД (B01).** `UnavailableTestMode` теперь
+   блокирует рабочие операции, если каталог тестового хранилища существует, а
+   БД исчезла. Если каталога нет вовсе — TEST никогда не включался, рабочий
+   режим работает. Добавлены два теста.
+2. **Установщик.** Исправлены реальные пути Termux/proot (`SOURCE` по
+   умолчанию `~/max-finance-test-deploy`), вызов `sv` с полным путём
+   `$PREFIX/var/service/max-finance`, добавлены снимок перед установкой,
+   проверка импорта до замены, атомарная замена и автоматический откат.
+   Проверено: dry-run на телефоне (`TEST_PACKAGE_OK`, `DRY_RUN`), снимок на
+   телефоне (32,6 МБ, SHA-256 и `tar tzf` — OK), локальная симуляция четырёх
+   сценариев — `reports/installer-simulation.txt`.
+3. **Регрессии:** устаревшая сводка, завершение ручного отчёта после сбоя
+   OCR, обязательное фото в `verify_backup`, путь к фото в Undo после
+   `restore`.
+
+Итог: **98 тестов + 7 baseline, 0 failures.** Независимой проверки этих
+изменений по-прежнему нет.
 
 ## Не готово / блокеры
 
@@ -85,7 +105,8 @@
 - Ответ на REVISE: `reports/REVIEW_RESPONSE.md`
 - Diff и манифест: `reports/changes.diff`
 - Метрики: `reports/evaluation.json`
-- Тесты: `reports/tests-after-gapfix.txt`, `reports/baseline-after-gapfix.txt`
+- Тесты: `reports/tests-round2.txt`, `reports/baseline-round2.txt`
+- Проверка установщика: `reports/installer-simulation.txt`
 - Откат: `staging/docs/ROLLBACK.md`
 - PR: https://github.com/naspirator/max-superagent-lab/pull/38
 

@@ -8,7 +8,7 @@ import pytest
 
 import maxfinance_test.handlers as handlers_module
 from maxfinance_test.handlers import ModeHandlers
-from maxfinance_test.model import Item, Report
+from maxfinance_test.model import Item, Report, ReportError
 from maxfinance_test.store import ModeStore
 
 
@@ -195,6 +195,38 @@ async def test_ocr_failure_keeps_draft_and_allows_manual(monkeypatch, tmp_path):
     assert loaded.items == []
     assert any("недоступен" in warning for warning in loaded.warnings)
     assert any("добавить позиции" in answer.lower() for answer in query.message.answers)
+    assert loaded.photo_reviewed is False
+    assert loaded.ocr_complete is False
+
+    # После ручного ввода позиций подтверждение фото снова доступно,
+    # и отчёт можно завершить без повторного OCR.
+    loaded.add_item(Item([Decimal("1000")], category="nal"))
+    store.save_draft(1, loaded)
+    ack = FakeQuery(f"tt:{loaded.nonce}:ackphoto")
+    await handlers.on_callback(ack)
+    after = store.load_draft(1)
+    assert after.photo_reviewed is True
+    assert after.ocr_complete is True
+    assert after.validate() is True
+
+
+@pytest.mark.asyncio
+async def test_confirm_rejects_summary_from_previous_revision(tmp_path):
+    store = make_store(tmp_path)
+    handlers = ModeHandlers(store, client=None, admin_id=1)
+    report = Report("2026-11-27", photo_reviewed=True,
+                    items=[Item([Decimal("1000")], category="nal")], version=1)
+    store.save_draft(1, report)
+    shown_version = report.version
+    report.set_terms(0, [Decimal("1200")], ["+"])
+    store.save_draft(1, report)
+
+    query = FakeQuery(f"tt:{report.nonce}:confirm:{shown_version}")
+    await handlers.on_callback(query)
+    assert any("Сводка устарела" in text for text in query.message.answers)
+    # Отчёт не подтверждён и не удалён.
+    assert store.load_draft(1) is not None
+    assert store.stats()["total"] == 0
 
 
 @pytest.mark.asyncio
