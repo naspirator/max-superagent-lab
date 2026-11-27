@@ -1,4 +1,4 @@
-﻿#!/data/data/com.termux/files/usr/bin/sh
+#!/data/data/com.termux/files/usr/bin/sh
 # Установка тестового режима в действующий бот.
 # ТОЛЬКО после явного согласования владельца:
 #   OWNER_APPROVED=1 SOURCE=/root/max-finance-test-deploy sh ~/install-test-mode.sh
@@ -35,11 +35,12 @@ set -eu
 cp -a '$SOURCE/bot.py' '$PROJECT/bot.py'
 rm -rf '$PROJECT/maxfinance_test'
 cp -a '$SOURCE/maxfinance_test' '$PROJECT/maxfinance_test'
-cd '$PROJECT'.venv/bin/python -c 'import maxfinance_test; print(\"TEST_PACKAGE_OK\")'
+cd '$PROJECT'
+.venv/bin/python -c 'import maxfinance_test; print("TEST_PACKAGE_OK")'
 "
 
 echo "=== Перезапуск службы ==="
 sv restart "$SERVICE"
 sleep 6
 sv status "$SERVICE"
-echo "INSTALLED. Проверь лог: tail -n 100 ~/max-server/logs/finance.log"
+echo "INSTALLED. Проверь лог: tail -n 100 \$PREFIX/var/log/sv/max-finance/current"

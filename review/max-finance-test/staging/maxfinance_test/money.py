@@ -102,7 +102,14 @@ def normalize_terms(terms: list[object], signs: list[object] | None = None) -> t
     for term, sign in zip(terms, signs):
         if sign not in SIGNS:
             raise MoneyError("Недопустимый знак")
-        result_terms.append(parse_amount(term))
+        number = parse_amount(term)
+        # Отрицательное число в terms — это вычитание, а не положительное
+        # слагаемое. Приводим к паре (модуль, знак), чтобы ensemble и UI
+        # не теряли минус.
+        if number < 0:
+            number = -number
+            sign = "-" if sign == "+" else "+"
+        result_terms.append(number)
         result_signs.append(sign)
     return result_terms, result_signs
 

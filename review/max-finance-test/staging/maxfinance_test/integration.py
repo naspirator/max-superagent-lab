@@ -35,6 +35,9 @@ class UnavailableTestMode:
 
     def is_test(self, user_id: int) -> bool:
         path = self.root / TEST_DB_NAME
+        sentinel = self.root / "active" / str(int(user_id))
+        if sentinel.is_file():
+            return True
         if not path.is_file():
             return False
         try:

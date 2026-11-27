@@ -191,6 +191,14 @@ def test_debts_are_separate_and_not_silently_deducted():
     assert "не вычитаются" in totals["debt_note"]
 
 
+def test_negative_term_with_plus_sign_is_preserved_as_minus():
+    report = Report("2026-11-27", photo_reviewed=True,
+                    items=[Item([Decimal("-500")], ["+"], category="debt")])
+    assert report.items[0].amount == Decimal("-500")
+    assert report.items[0].signs == ["-"]
+    assert report.items[0].terms == [Decimal("500")]
+
+
 def test_ensemble_does_not_replace_signed_expression():
     from maxfinance_test.ensemble import merge_amounts
     report = Report("2026-11-27", photo_reviewed=True, items=[item([1000, 200], ["+", "-"], bbox=[0.1, 0.1, 0.3, 0.2])])

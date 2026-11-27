@@ -438,6 +438,15 @@ class ModeStore:
             path = source / name
             if not path.is_file() or _sha256_file(path) != expected:
                 raise ValueError("Резервная копия повреждена: " + name)
+        # Все фото подтверждённых примеров должны быть в копии и в манифесте.
+        try:
+            with closing(sqlite3.connect(f"file:{source / TEST_DB_NAME}?mode=ro", uri=True)) as db:
+                for (photo_name,) in db.execute("SELECT photo_path FROM examples"):
+                    photo = source / "confirmed" / str(photo_name)
+                    if not photo.is_file() or str(photo.relative_to(source)) not in manifest.get("files", {}):
+                        raise ValueError("В резервной копии нет фото примера: " + str(photo_name))
+        except sqlite3.Error as exc:
+            raise ValueError("Не удалось проверить фото примеров") from exc
         return manifest
 
     @classmethod
@@ -463,7 +472,20 @@ class ModeStore:
                 old_path = data.get("photo_path")
                 if old_path:
                     data["photo_path"] = str(dest / "input" / Path(old_path).name)
-                    db.execute("UPDATE drafts SET payload=? WHERE user_id=?", (json.dumps(data, ensure_ascii=False), user_id))
+                # Undo-снимки тоже содержат абсолютный путь к фото.
+                history = []
+                for snapshot in data.get("history", []):
+                    try:
+                        entry = json.loads(snapshot)
+                    except (TypeError, ValueError):
+                        history.append(snapshot)
+                        continue
+                    old = entry.get("photo_path")
+                    if old:
+                        entry["photo_path"] = str(dest / "input" / Path(old).name)
+                    history.append(json.dumps(entry, ensure_ascii=False))
+                data["history"] = history
+                db.execute("UPDATE drafts SET payload=? WHERE user_id=?", (json.dumps(data, ensure_ascii=False), user_id))
             db.commit()
         store = cls(dest)
         store.initialize()

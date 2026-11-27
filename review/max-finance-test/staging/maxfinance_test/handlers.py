@@ -162,8 +162,19 @@ class ModeHandlers:
 
 
 
-    def is_test(self, user_id: int) -> bool:
+    def _mode_file(self, uid: int) -> Path:
+        return self.store.root / "active" / str(int(uid))
 
+    def _mark_mode(self, uid: int, mode: str) -> None:
+        folder = self.store.root / "active"
+        folder.mkdir(parents=True, exist_ok=True)
+        path = self._mode_file(uid)
+        if mode == "TEST":
+            path.write_text("TEST", encoding="utf-8")
+        elif path.exists():
+            path.unlink()
+
+    def is_test(self, user_id: int) -> bool:
         return self.store.setting(f"mode:{int(user_id)}", "WORK") == "TEST"
 
 
@@ -293,6 +304,7 @@ class ModeHandlers:
         uid = message.from_user.id
 
         self.store.set_setting(f"mode:{uid}", "TEST")
+        self._mark_mode(uid, "TEST")
 
         draft = self._draft(uid)
 
@@ -331,6 +343,7 @@ class ModeHandlers:
         uid = message.from_user.id
 
         self.store.set_setting(f"mode:{uid}", "WORK")
+        self._mark_mode(uid, "WORK")
 
         self.editing.pop(uid, None)
 
@@ -621,6 +634,7 @@ class ModeHandlers:
         if action == "work":
 
             self.store.set_setting(f"mode:{uid}", "WORK")
+            self._mark_mode(uid, "WORK")
 
             self.editing.pop(uid, None)
 
@@ -1248,11 +1262,16 @@ class ModeHandlers:
 
             report.validate({p["id"] for p in self.store.staff()})
 
-            await self._send(query, ui.summary_text(report, book), ui.confirm_keyboard(nonce))
+            await self._send(query, ui.summary_text(report, book), ui.confirm_keyboard(nonce, report.version))
 
             return
 
         if action == "confirm":
+
+            shown = _int(args, 0, -1)
+
+            if shown != report.version:
+                raise ReportError("Сводка устарела: отчёт изменился после её показа. Нажми «Проверить» заново.")
 
             await self._confirm(query, report, uid)
 
@@ -1475,6 +1494,8 @@ class ModeHandlers:
             report.ocr_complete = False
 
             report.ocr_stale = False
+
+            report.photo_reviewed = False
 
             self._save(uid, report)
 

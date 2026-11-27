@@ -321,9 +321,9 @@ def summary_text(report: Report, book: AliasBook) -> str:
     return "\n".join(lines)[:3900]
 
 
-def confirm_keyboard(nonce: str) -> InlineKeyboardMarkup:
+def confirm_keyboard(nonce: str, version: int) -> InlineKeyboardMarkup:
     return keyboard([
-        [button("✅ Подтвердить и сохранить в тест", cbd(nonce, "confirm"))],
+        [button("✅ Подтвердить и сохранить в тест", cbd(nonce, f"confirm:{version}"))],
         [button("↩️ Вернуться к правке", cbd(nonce, "page:0"))],
         [button("❌ Отменить отчёт", cbd(nonce, "cancel"))],
     ])
