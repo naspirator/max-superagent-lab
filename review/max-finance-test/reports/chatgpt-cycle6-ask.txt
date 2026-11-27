@@ -1,0 +1,15 @@
+Шестой цикл, только два исправления B01 из пятого цикла. PR #38, HEAD — актуальный в ветке review/max-finance-test-20261127 после коммита с проверкой схемы БД.
+https://github.com/naspirator/max-superagent-lab/pull/38
+
+Что изменено:
+1) BLOCKER (пустой файл БД): добавлен `ModeStore._has_schema()` — до создания таблиц проверяется, что в файле есть таблица `meta` и запись `schema_version`. Если `installed` есть, а схемы нет (файла нет, файл 0 байт, мусор), ставится `meta.recovered=1` и `store.recovered=True`; `/sync`, текст и фото блокируются.
+2) MAJOR (restore): `backup` и `restore` теперь переносят файл `installed`. Кроме того, при первой установке `initialize()` читает `meta.recovered` из уже существующей БД, поэтому восстановленная копия не теряет fail-closed.
+
+Проверь:
+1. Сценарий из цикла 5 через настоящий диспетчер: create_test_handlers → TEST → удалить test_finance.db и active/<uid> → обычным обращением к хранилищу создать пустой 0-байтный файл → перезапуск/initialize → /sync, текст и фото не доходят до WORK.
+2. MAJOR: backup хранилища с recovered=1 → restore → объект, возвращённый restore(), не пропускает /sync, текст и фото в WORK.
+3. Обычная первая установка (installed нет) не блокирует WORK; здоровый backup/restore не включает recovered.
+4. Повреждённый файл БД и повторный initialize.
+5. Не сломаны остальные тесты: 108 + 7 baseline, 0 failures (reports/tests-at-head.txt).
+
+Ответ строго: VERDICT: APPROVE | REVISE | BLOCKED, затем только новые BLOCKER/MAJOR с файлами и строками. Если всё закрыто — APPROVE. Не публикуй review и не меняй PR.

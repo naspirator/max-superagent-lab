@@ -1,0 +1,81 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MAX FINANCE TEST — макет интерфейса</title>
+<style>
+body{font-family:-apple-system,"Segoe UI",Roboto,sans-serif;background:#dfe7ee;margin:0;padding:24px;color:#17212b}
+header{max-width:860px;margin:0 auto 18px;background:#fff;border-radius:14px;padding:16px 20px;box-shadow:0 2px 10px #0001}
+header h1{margin:0 0 6px;font-size:20px}header p{margin:0;color:#5b6b7a;font-size:13px}
+section{max-width:860px;margin:0 auto 22px;background:#fff;border-radius:14px;padding:14px 16px 18px;box-shadow:0 2px 10px #0001}
+h2{font-size:15px;margin:4px 0 12px;color:#2b5278}
+.msg{display:flex;flex-direction:column;align-items:flex-start;margin:8px 0}
+.author{font-size:11px;color:#2b5278;margin:0 0 4px 10px}
+.bubble{background:#fff;border:1px solid #d5e0ea;border-radius:12px 12px 12px 4px;padding:10px 12px;max-width:780px}
+pre{white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.45;margin:0}
+.keyboard{display:flex;flex-direction:column;gap:5px;margin-top:10px}
+.row{display:flex;gap:5px}
+.btn{flex:1;background:#e8f0f7;border:1px solid #c5d7e6;border-radius:8px;padding:7px 8px;font-size:12px;color:#1f4b73;text-align:center}
+.note{max-width:860px;margin:0 auto 18px;font-size:12px;color:#5b6b7a}
+</style></head><body>
+<header><h1>MAX FINANCE TEST — интерфейс в Telegram</h1>
+<p>Макет по реальным текстам и inline-клавиатурам aiogram. Не снимок живого Telegram:
+запуск второго обработчика на действующем токене запрещён до согласования владельца.</p></header>
+<div class="note">Все суммы и итоги на экране — демонстрационные. Тестовый режим не отправляет данные в рабочую Google-таблицу.</div>
+<section><h2>Главное меню тестового режима</h2><div class="msg"><div class="author">MAX FINANCE TEST · бот</div><div class="bubble"><pre>🧪 MAX FINANCE TEST
+
+Тестовый режим внутри действующего бота.
+Фотографии, распознавание и исправления хранятся отдельно.
+Рабочая Google-таблица не изменяется.
+
+Отправь фотографию отчёта или открой базу примеров.</pre><div class="keyboard"><div class="row"><button class="btn">▶️ Продолжить черновик</button></div><div class="row"><button class="btn">📷 Новый отчёт: отправь фото</button></div><div class="row"><button class="btn">📚 База примеров</button><button class="btn">👥 Словарь</button></div><div class="row"><button class="btn">⚙️ Линия распознавания</button></div><div class="row"><button class="btn">↩️ В рабочий режим</button></div></div></div></div></section><section><h2>Список позиций после распознавания</h2><div class="msg"><div class="author">MAX FINANCE TEST · бот</div><div class="bubble"><pre>🧪 MAX FINANCE TEST · 2026-11-21
+Позиции 1–5 из 6
+
+1. 36 800 ₽ · Б/Н
+    Безнал
+2. 4 500 ₽ · П
+    Сотрудник: ПЕТ / Безнал
+3. 17 200 ₽ · Нал
+    Наличные
+4. 4 000 ₽ · Т
+    Сотрудник: ТОЛ / Наличные
+5. 4 000 ₽ · В
+    Сотрудник: ВЛА / Наличные
+
+Безнал: 36 800 ₽
+Наличные: 17 200 ₽
+Выплаты сотрудникам: 21 700 ₽
+
+Нажми позицию, чтобы изменить любые данные.</pre><div class="keyboard"><div class="row"><button class="btn">1. 36 800 ₽ · Б/Н</button></div><div class="row"><button class="btn">2. 4 500 ₽ · П</button></div><div class="row"><button class="btn">3. 17 200 ₽ · Нал</button></div><div class="row"><button class="btn">4. 4 000 ₽ · Т</button></div><div class="row"><button class="btn">5. 4 000 ₽ · В</button></div><div class="row"><button class="btn">▶️</button></div><div class="row"><button class="btn">➕ Добавить позицию</button><button class="btn">Σ Итоги</button></div><div class="row"><button class="btn">📅 Дата</button><button class="btn">✂️ Линия</button></div><div class="row"><button class="btn">🔁 Распознать заново</button></div><div class="row"><button class="btn">↩️ Отменить действие</button><button class="btn">✅ Проверить</button></div><div class="row"><button class="btn">❌ Отменить отчёт</button><button class="btn">🏠 Меню</button></div></div></div></div></section><section><h2>Карточка позиции: доступно любое изменение</h2><div class="msg"><div class="author">MAX FINANCE TEST · бот</div><div class="bubble"><pre>Позиция 2
+Сумма: 4 500 ₽
+Слагаемые: 4 500
+Категория: Сотрудник: ПЕТ / Безнал
+Буквенное обозначение: П
+Источник: Безнал
+Исходная запись: —
+
+Доступно любое изменение.</pre><div class="keyboard"><div class="row"><button class="btn">💰 Сумма/выражение</button></div><div class="row"><button class="btn">🔢 Слагаемые и знаки</button></div><div class="row"><button class="btn">👤 Сотрудник</button><button class="btn">🔤 Буква</button></div><div class="row"><button class="btn">🏷 Категория</button><button class="btn">💳 Источник</button></div><div class="row"><button class="btn">✂️ Разделить</button><button class="btn">🔗 Объединить</button></div><div class="row"><button class="btn">⬆️ Выше</button><button class="btn">⬇️ Ниже</button></div><div class="row"><button class="btn">🗑 Удалить</button></div><div class="row"><button class="btn">↩️ К списку</button></div></div></div></div></section><section><h2>Итоги категорий: ручной итог не меняет выплаты</h2><div class="msg"><div class="author">MAX FINANCE TEST · бот</div><div class="bubble"><pre>Σ Итоги категорий
+
+Безнал: 36 800 ₽ (вычислено)
+Наличные: 17 200 ₽ (вычислено)
+Итог: нет на фото (не создаём)
+
+Выплаты сотрудникам (не меняются при правке итога категории):
+• #1 · Безнал: 4 500 ₽
+• #1 · Наличные: 9 200 ₽
+• #5 · Наличные: 4 000 ₽
+• #7 · Наличные: 4 000 ₽
+Всего выплат: 21 700 ₽</pre><div class="keyboard"><div class="row"><button class="btn">Безнал</button><button class="btn">Наличные</button></div><div class="row"><button class="btn">Итог</button></div><div class="row"><button class="btn">↩️ К позициям</button></div></div></div></div></section><section><h2>Проверка и подтверждение</h2><div class="msg"><div class="author">MAX FINANCE TEST · бот</div><div class="bubble"><pre>✅ ПРОВЕРКА ТЕСТОВОГО ОТЧЁТА
+📅 2026-11-21
+
+1. 36 800 ₽ · Б/Н · Безнал
+2. 4 500 ₽ · П · Сотрудник: ПЕТ / Безнал
+3. 17 200 ₽ · Нал · Наличные
+4. 4 000 ₽ · Т · Сотрудник: ТОЛ / Наличные
+5. 4 000 ₽ · В · Сотрудник: ВЛА / Наличные
+6. 9 200 ₽ · П [проверить] · Сотрудник: ПЕТ / Наличные
+
+Безнал: 36 800 ₽
+Наличные: 17 200 ₽
+Выплаты сотрудникам: 21 700 ₽
+
+Подтверждение сохранит пример в тестовую базу.
+В рабочую Google-таблицу ничего не будет отправлено.</pre><div class="keyboard"><div class="row"><button class="btn">✅ Подтвердить и сохранить в тест</button></div><div class="row"><button class="btn">↩️ Вернуться к правке</button></div><div class="row"><button class="btn">❌ Отменить отчёт</button></div></div></div></div></section></body></html>

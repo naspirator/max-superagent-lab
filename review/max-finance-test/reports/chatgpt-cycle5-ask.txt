@@ -1,0 +1,12 @@
+Пятый цикл, только B01 (точечная перепроверка). PR #38, HEAD c536711, diff 5fd4eab..c536711 (9273ae2 — исправление B01, ae744c4 — тест на уровне диспетчера, c536711 — документы).
+https://github.com/naspirator/max-superagent-lab/pull/38
+
+Исправление: при первой установке пишется `test-mode/installed`; если БД исчезла при существующем `installed`, `ModeStore.initialize()` ставит `meta.recovered=1`, и `is_test`/`cmd_blocked`/`on_text`/`handle_photo` блокируют /sync, свободный текст и фото. При первой установке (installed нет) WORK не блокируется.
+
+Проверь:
+1. Сценарий из четвёртого цикла: create_test_handlers → TEST → удалить test_finance.db и active/<uid> → перезапуск/initialize → /sync, текст и фото не доходят до WORK.
+2. Обычная первая установка: WORK-пользователь не блокируется.
+3. Не сломаны ли остальные тесты. На этом HEAD прогнаны 103 теста нового режима и 7 baseline, 0 failures (reports/tests-at-head.txt).
+4. Нет ли обхода: пустая/повреждённая БД, повторный initialize, backup/restore.
+
+Ответ строго: VERDICT: APPROVE | REVISE | BLOCKED, затем только новые BLOCKER/MAJOR с файлами и строками. Если всё закрыто — APPROVE. Не публикуй review и не меняй PR.

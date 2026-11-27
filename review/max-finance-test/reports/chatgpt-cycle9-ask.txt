@@ -1,0 +1,34 @@
+Девятый цикл: проверка снятия технического BLOCKED. PR #38, ветка
+review/max-finance-test-20261127. Код не менялся после cad6262: дальше только
+CI, счётчик тестов в README и отчёты, поэтому вершина ветки может быть на
+docs-коммит позже — на код это не влияет.
+
+Восьмой цикл вернул BLOCKED только потому, что в среде проверки нет aiogram и
+сетевого доступа для повторного прогона; новых BLOCKER/MAJOR не найдено,
+замечание седьмого цикла закрыто.
+
+Независимый прогон в чистом окружении (GitHub Actions, ubuntu-latest, Python
+3.12, зависимости из PyPI):
+- run 46059242077 (коммит ad8168f) — success: 119 passed in 1.81s,
+  NEGATIVE_CONTROL=OK, установщик 7/7;
+- последний прогон на текущей вершине — success (если ссылок мало, смотри
+  `reports/ci-run.txt`).
+Сводка и ключевые строки лога — в репозитории: `reports/ci-run.txt`.
+
+Проверь:
+1. `reports/ci-run.txt`: 119 passed (112 + 7), aiogram установлен из PyPI,
+   NEGATIVE_CONTROL=OK, семь сценариев установщика PASS.
+2. Что это независимая среда: GitHub Actions, ubuntu-latest, Python 3.12,
+   собственный checkout и установка зависимостей, без моей машины и телефона.
+3. Что после code-коммита `cad6262` код не менялся: в `a6a798b` и `ad8168f`
+   только `.github/workflows/ci.yml`, счётчик тестов в `staging/README.md` и
+   строка README в `reports/changes.diff`; в `d7e9a3f`, `b983294`, `8eafdc7` —
+   отчёты.
+4. Если среда всё же позволяет запуск: `python -m pip install -r requirements.txt`
+   и `python -m pytest tests tests_baseline` в `staging/`. Если нет — используй
+   CI-прогон как независимое исполнение и проверь его лог.
+
+Ответ строго: VERDICT: APPROVE | REVISE | BLOCKED, затем только новые
+BLOCKER/MAJOR с файлами и строками. Если технический BLOCKED остаётся, укажи
+конкретно, какая возможность отсутствует и почему CI-прогон её не заменяет.
+Не публикуй review и не меняй PR.

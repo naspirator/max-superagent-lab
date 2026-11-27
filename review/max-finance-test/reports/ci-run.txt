@@ -1,0 +1,59 @@
+CI: независимый прогон пакета MAX FINANCE TEST в чистом окружении
+==================================================================
+
+Run:    https://github.com/naspirator/max-superagent-lab/actions/runs/46059242077
+Commit: ad8168f638cb9a703fe328af4126742f81b0410c
+Job:    maxfinance-test (ubuntu-latest, Python 3.12.16)
+Дата:   27.11.2026, 19:48 UTC (22:48 MSK)
+
+Шаги job: checkout, setup-python 3.12, pip install -r requirements.txt (PyPI),
+pytest tests tests_baseline, отрицательный контроль, симуляция установщика,
+выгрузка артефактов (pytest.xml, pytest.log, negative-control.log,
+installer.log, pip.log).
+
+Зависимости установлены из PyPI (фрагмент лога):
+Successfully installed Pillow-13.0.0 aiofiles-25.1.0 aiogram-3.34.0
+aiohttp-3.14.5 aiohappyeyeballs-2.7.1 aiosignal-1.4.0 annotated-types-0.8.0
+anyio-4.16.0 attrs-26.1.0 certifi-2026.11.20 cffi-2.1.1 ... (полный список в
+логе job).
+
+Тесты:
+============================= 119 passed in 1.81s ==============================
+(112 тестов tests/ + 7 baseline)
+
+Отрицательный контроль:
+OLD_IMPLEMENTATION=FAIL (ожидается FAIL)
+CURRENT_IMPLEMENTATION=PASS (ожидается PASS)
+NEGATIVE_CONTROL=OK
+
+Установщик:
+PASS: установка заменила код, БД не тронута
+PASS: при сбое службы восстановлен код, БД не откатывалась
+PASS: dry-run ничего не изменил
+PASS: битый пакет отклонён до замены (rc=2)
+PASS: откат затронул PROJECT, посторонний каталог не тронут
+PASS: смена PID обнаружена, выполнен откат
+PASS: отсутствие sv отклонено до изменений
+ALL INSTALLER SIMULATION CHECKS PASSED
+
+Итог: job `maxfinance-test` — success, все шаги success; job `test` — success.
+==================================================================
+Реестр прогонов на вершинах ветки review/max-finance-test-20261127
+
+Код не менялся с cad6262 (последний code-коммит): после него в ветке только
+.github/workflows/ci.yml, счётчик тестов в staging/README.md и отчёты. Поэтому
+все прогоны ниже проверяли один и тот же набор тестов.
+
+| run | коммит | результат |
+|---|---|---|
+| 46059242077 | ad8168f | success, 119 passed in 1.81s |
+| 46060253125 | 0fb30c2 | success |
+| 46063302889 | 4c83891 | success |
+| 46063583571 | 5d16fac | success |
+| 46063621288 | 4daa9bf | success |
+| 46063895279 | 95a74cf | success |
+
+Каждый следующий прогон запускался после docs-коммита, поэтому коммит этого
+файла по определению новее последней строки таблицы: прогон на нём — на вкладке
+Actions (тот же код и тот же набор тестов).
+Адрес для сверки: https://github.com/naspirator/max-superagent-lab/actions

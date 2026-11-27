@@ -1,0 +1,118 @@
+# MAX FINANCE TEST — изменения относительно действующего кода
+
+Ниже: полный diff `bot.py` (единственный изменённый рабочий файл) и манифест
+новых файлов тестового режима. Новые файлы не входят в diff PROD; они лежат
+в `staging/maxfinance_test/` и не импортируются рабочим кодом без строки
+`import maxfinance_test` в `bot.py`.
+
+## Diff bot.py
+
+```diff
+diff --git a/prod-src/max-finance-stage/bot.py b/staging/bot.py
+index 73fbf2a..8ee470a 100644
+--- a/prod-src/max-finance-stage/bot.py
++++ b/staging/bot.py
+@@ -10,6 +10,7 @@ from aiogram import Bot,Dispatcher,F,Router
+ from aiogram.filters import Command,CommandStart
+ from aiogram.types import Message,CallbackQuery,InlineKeyboardButton,InlineKeyboardMarkup,BufferedInputFile,InputMediaPhoto
+ import finance_v3 as f
++import maxfinance_test
+ import ocr_v3
+ import sheets_v3
+ from reports import reports_router
+@@ -23,6 +24,7 @@ store=f.Store(DATABASE)
+ client=AsyncOpenAI(api_key=API_KEY or 'not-configured',base_url='https://api.vsegpt.ru/v1',timeout=180,max_retries=0)
+ router=Router();drafts={};editing={};busy=set();saving=set();staff_sessions={}
+ db_lock=asyncio.Lock();sheet_lock=asyncio.Lock()
++TEST_HANDLERS=None
+ LABELS={'beznal':'Безнал','nal':'Нал','itog':'Итог','employee':'Сотрудник','debt':'Долг','ignore':'Не учитывать',None:'Не назначено'}
+ SOURCES={'beznal':'Безнал','nal':'Нал','unknown':'Не указан'}
+ 
+@@ -225,6 +227,15 @@ async def manual_sync(message:Message):
+         await message.answer('Не удалось обновить Google. Локальная база сохранена; повтори /sync.')
+ 
+ async def process_photo(message,bot,file):
++    if TEST_HANDLERS is not None:
++        try:
++            if await TEST_HANDLERS.handle_photo(message,bot,file):return
++        except Exception:
++            if TEST_HANDLERS.is_test(message.from_user.id):
++                await message.answer('⛔ Тестовый режим недоступен. Фото не отправлено в рабочий режим.')
++                return
++            raise
++        if TEST_HANDLERS.is_test(message.from_user.id):return
+     if not allowed(message):return
+     uid=message.from_user.id
+     if uid in busy or uid in drafts:
+@@ -581,7 +592,16 @@ async def main():
+     if os.getenv('FINANCE_ALLOW_POLLING')!='1':raise RuntimeError('Запуск заблокирован до отдельного разрешения пользователя')
+     if not TOKEN or not API_KEY or not ADMIN_ID or not SHEET_ID:raise RuntimeError('Не заполнены настройки бота')
+     store.initialize()
+-    bot=Bot(token=TOKEN);dp=Dispatcher();dp.include_router(reports_router);dp.include_router(router)
++    bot=Bot(token=TOKEN);dp=Dispatcher()
++    global TEST_HANDLERS
++    try:
++        TEST_HANDLERS=maxfinance_test.create_test_handlers(BASE,DATABASE,SHEET_ID,client,ADMIN_ID)
++        dp.include_router(TEST_HANDLERS.router)
++    except Exception as exc:
++        TEST_HANDLERS=maxfinance_test.UnavailableTestMode(BASE)
++        dp.include_router(TEST_HANDLERS.router)
++        print('TEST_MODE_INIT_ERROR:',repr(exc),flush=True)
++    dp.include_router(reports_router);dp.include_router(router)
+     try:await dp.start_polling(bot)
+     finally:await bot.session.close();await client.close()
+```
+
+## Новые файлы тестового режима
+
+| Файл | SHA-256 | Байт |
+|---|---:|---:|
+| `bot.py` | `95a8de9f946bf621b90226eddf1ced87cce9e8b60ecd87d3fdb4bfae5ba88eb3` | 40331 |
+| `deploy/backup-production.sh` | `f0a329aad57959ec7cc8adba84a4374de369ac2a0b3e9e1902d4a75610f3a89a` | 1002 |
+| `deploy/install-test-mode.sh` | `c24718853ce5104cd0e94942324970cdeaae889dc32e4d1e4feab7efacb908b9` | 6596 |
+| `deploy/rollback-production.sh` | `b4d289f6e2a26d974943104dcd594ab90e278d7c2abcbbf89c6ecb2f08bd5e27` | 2405 |
+| `deploy/tests/simulate-install.sh` | `7b9c3986f7206d270d531d1bb3f6d8b6c99863ce50792c95c9ec040c01d45089` | 6100 |
+| `docs/ARCHITECTURE.md` | `d8a0768865240a0b098cc631934e541bec0fbd3deff888f8769885a895f660f1` | 7993 |
+| `docs/ROLLBACK.md` | `8a791d60cafd2ef7f0ee51c840bf64c542ba059c9411100e954746df1d2394aa` | 4292 |
+| `finance_v3.py` | `59bdd3e8692aa5f7dc8e3dfd8d4f69c08f94cb2a1bf2b28fce525e9d10c72a5f` | 29606 |
+| `maxfinance_test/__init__.py` | `deed35601d91488d078105754c3cff6558baf357dbaf32f6d946eaadf87b0135` | 876 |
+| `maxfinance_test/aliases.py` | `f9f0e73443a6a4f4744dfcc752430833e4d1b1557190670922b2521ec720b4c3` | 6523 |
+| `maxfinance_test/ensemble.py` | `174995af8d15774c4e37dbb3749b30dc659241857553734e7973097f7d881338` | 5160 |
+| `maxfinance_test/handlers.py` | `edf5f7e9956810fa76805e7fd27a23adc61e930d8f8fca0d961a79dcbeaa2f81` | 50987 |
+| `maxfinance_test/integration.py` | `0d97a289c26d996c8272c3bdb6477fcdad3c82c48fd3f88e53573e205cfb530f` | 5501 |
+| `maxfinance_test/line.py` | `463186edb15ba3bd4284e3ac9f7b0ee834114cb4646f04c337410993f7228d2e` | 8370 |
+| `maxfinance_test/model.py` | `48b5cfff07f9eb01ccee1d432fcd04fda62ded70511f4d9a834bc9d664b1be08` | 26805 |
+| `maxfinance_test/money.py` | `738b742b31f6a6c757da9e7101ea9b5a3da8658ff41016bd87e3d1f8bf3e501a` | 5871 |
+| `maxfinance_test/ocr.py` | `c6c8e322031800bf91acaa218cccb43fb7ec438a92946c9e901272c3bf6072c1` | 20731 |
+| `maxfinance_test/store.py` | `6b8a916b9a897ecb699de3beb1face66acaa303c39d404c7d6d05c09805d4d3f` | 33160 |
+| `maxfinance_test/training.py` | `e1c42369f0c350c5f36cc001495db053dc0811f5172333df838214ee39935522` | 3276 |
+| `maxfinance_test/ui.py` | `2392fa5110b9f68359494f560279cf243611f6b2c259a6cc45dccd353fc32d3e` | 19173 |
+| `ocr_v3.py` | `91be4a84f1c16565678cb5eae459d1b3c03aab51760024a814e1b516c9817d11` | 3048 |
+| `pytest.ini` | `bcca2004395dbab576fc6a8ecb213e31bc4ebdbe8529821c2e8d4306205e31b0` | 88 |
+| `README.md` | `53fc1d671b02d37a947486f8836cf5f5569e1e51e3b895aa46e8d82680394034` | 2535 |
+| `reports.py` | `584b95663386ec32a301280be05cb3fe09c759a209f073acd07302d01531e660` | 4557 |
+| `requirements.txt` | `b4b44b41f8d2731f7548a75bd830d40c28401cdb635a21d28ce7efd4d1a99cec` | 141 |
+| `sheets_v3.py` | `2e4a514eaf347961e197637329dcab03063548acde98fba9eccab44905063341` | 10357 |
+| `tests/conftest.py` | `fb87a67f8b40e2301f7bced9304dc706daace7febf456172c99193c28d721a6c` | 150 |
+| `tests/test_aliases.py` | `72bc04a6c5dd2dc7d77979e0e3845a689bb06924239dac84f50a7f65d9ca433a` | 3077 |
+| `tests/test_cycle3_regressions.py` | `22f59864b6dda3a65d2ca1b03097d8c8c82ea1f39ad68fd4294348420a3db7c0` | 13106 |
+| `tests/test_dispatch_isolation.py` | `6a5495bc0e7177aee75018c4659f0477289c4e98a98196a025a2ba5e05c04717` | 9421 |
+| `tests/test_flow.py` | `2d645f32f15b3147155b751730a7879b150071391852e0a24fbeb50c05b885ee` | 10048 |
+| `tests/test_isolation.py` | `70f4bf118040f58260d9a55b8bb5488c6554dd0904e3788eb26cd0938f5d31e7` | 5744 |
+| `tests/test_model.py` | `553f977177c334fb55440e536cf428edd732fa5f7dad365ac4b4150c338d4215` | 9129 |
+| `tests/test_ocr.py` | `907347e8fc43838a29e471ad6cf5cd4e0289b9dfc96c554d1bd104814819cca0` | 5164 |
+| `tests/test_store.py` | `b51df7e0dd974c5259f5f6a1abd68b48fea283664fb6528f2cfee93f3d2d8c43` | 10373 |
+| `tests/test_ui.py` | `7b002fff1043996d8ad339cc10022df98ed5be345c07e6ca63b0d41cde121386` | 7602 |
+| `tests_baseline/conftest.py` | `5248834bedb27c775834cd9084171b9a0e074d0528d1f51ac4142a6dcf9b18aa` | 164 |
+| `tests_baseline/test_baseline.py` | `4bf512043f04946774f8d641dab89923e2d33c757611f676f1419c984fa337f6` | 3069 |
+| `tools/check_bot_alive.py` | `22a70c3911a7d994443cc353b0bac2c553623d2b2bcd4fb67804be5bffccb173` | 523 |
+| `tools/check_line.py` | `9e5487875771893f7593550fdb71b7b69561353626cbb99075ecd5b5f3a19459` | 562 |
+| `tools/check_proposal.py` | `5a1823b2f9b527ab49c04eb4d32d74564c8d9eb47685c877a4c2de32d043029e` | 704 |
+| `tools/check_sheets.py` | `ff3c7e0ad1e1e3e9a97680ab274a289783430ac2c89461ef56464cecbeade6a5` | 702 |
+| `tools/evaluate.py` | `39ba5215da24ec74c8e03793f9d8f26bff0fcc7ae48c1735e4e457a6a9227e85` | 7596 |
+| `tools/make_manifest.py` | `1e5c8353cbc8556576abed046c35a65b838497bb8925e3f295999021512cde78` | 1906 |
+| `tools/make_ui_mock.py` | `77bd287f38a05072a175c1bfc15aca8281509c376a644bd39dbc65acef917963` | 5394 |
+| `tools/ping_api.py` | `eba560e36f3e4af8e0677115c71f44af74268267a1bc752b48c7c9145f1dcb0f` | 860 |
+| `tools/run_ocr.py` | `ced214715dc28979b43c5f84040c83a83b70f2a5b36cf406622eecae43563edb` | 1665 |
+| `tools/verify_backup.py` | `0d4e4ab4cf3226d55a9147c774e51b76ff6efded9a1646f987f232ca071e061e` | 3537 |
+| `tools/verify_regression_catches_settings_bug.py` | `0bd6aa4fcc6f30e19bd81e313b55201ec06b8aa6ebd74931e2692c7dbde13df7` | 2508 |

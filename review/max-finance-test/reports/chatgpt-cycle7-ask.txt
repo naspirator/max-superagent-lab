@@ -1,0 +1,15 @@
+Седьмой цикл, только исправления из шестого цикла. PR #38, актуальный HEAD ветки review/max-finance-test-20261127 (коммит после ccee903).
+https://github.com/naspirator/max-superagent-lab/pull/38
+
+Что изменено:
+1) BLOCKER (неполная схема): добавлен `REQUIRED_TABLES` — все девять таблиц схемы v1 (meta, staff, staff_alias, seed_conflicts, settings, drafts, line_settings, examples, audit). `_has_schema()` возвращает False, если нет любой из них; при существующем installed это включает `meta.recovered=1` и блокирует /sync, текст и фото.
+2) MAJOR (покрытие): добавлен `tests/test_dispatch_isolation.py`. Тесты прогоняют обновления через настоящий `Dispatcher.feed_update` с `Bot` и сессией без сети: (а) потеря БД → пустой файл → блокировка /sync, текста и фото; (б) `meta` жива, таблица settings удалена → блокировка; (в) обычный пользователь без маркера → /sync, текст и фото доходят до WORK.
+3) В тест backup/restore добавлена проверка свободного текста.
+
+Проверь:
+1. Сценарий из цикла 6: удалить таблицу settings при живой meta и installed → initialize/recovered → /sync, текст и фото не доходят до WORK.
+2. Полнота REQUIRED_TABLES: нет ли таблицы, которую можно потерять и остаться в WORK; нет ли ложного recovered на здоровой базе или после restore.
+3. Диспетчерские тесты действительно идут через aiogram Dispatcher и падают, если вернуть старое поведение (например, recovered=False).
+4. Прогони 111 + 7 baseline (reports/tests-at-head.txt).
+
+Ответ строго: VERDICT: APPROVE | REVISE | BLOCKED, затем только новые BLOCKER/MAJOR с файлами и строками. Если всё закрыто — APPROVE. Не публикуй review и не меняй PR.

@@ -1,0 +1,50 @@
+# Вердикт ChatGPT, цикл 7
+
+Получен 27.11.2026 из чата «Проверка PR восстановления БД» (HEAD 423ec13).
+Текст без изменений:
+
+```text
+VERDICT: REVISE
+- MAJOR — регрессионный тест не обнаруживает дефект шестого цикла.
+  tests/test_dispatch_isolation.py:114–127, 156–168. Тест удаления таблицы
+  settings использует recovered_store(), который заранее устанавливает
+  meta.recovered=1. Поэтому тест пройдёт даже со старой реализацией
+  _has_schema() из ccee903. Необходимо начинать со здоровой БД с
+  recovered=False, установить TEST, удалить settings и маркер пользователя,
+  затем выполнить initialize() и проверить все три обновления через диспетчер.
+На HEAD 423ec13 новых BLOCKER в проверенном коде не обнаружено. Отчёт
+111 + 7 PASS подтверждён, но независимый запуск невозможен: aiogram
+отсутствует, сетевой доступ из среды исполнения недоступен. PR не изменён,
+review не опубликовано.
+```
+
+## Что было верно в замечании
+
+Тест действительно стартовал с уже восстановленной базы: `recovered_store()`
+удалял файл БД, создавал пустой и возвращал хранилище с `recovered=True`.
+После этого `DROP TABLE settings` и повторный `initialize()` читали уже
+записанный в `meta` флаг `recovered=1`, поэтому утверждение
+`again.recovered is True` выполнялось и на старой проверке схемы. Тест был
+регрессионным только по названию.
+
+## Что исправлено (раунд 5)
+
+1. `damaged_store_root()` — сценарий начинается со здоровой базы
+   (`recovered=False`), затем включается TEST, удаляется таблица `settings` и
+   маркер пользователя `active/1`; предусловие проверяет полноту схемы до
+   повреждения.
+2. `test_dispatcher_blocks_when_meta_survives_but_settings_table_is_lost`
+   переписан на этот сценарий: `initialize()` → `recovered=True` → `/sync`,
+   текст и фото не доходят до WORK.
+3. Новый мета-тест `test_old_schema_check_would_let_user_back_into_work`
+   подменяет `_has_schema()` на реализацию из `ccee903` и требует обратного:
+   `recovered=False` и доставку всех трёх обновлений в WORK. Если сценарий
+   перестанет воспроизводить дефект, мета-тест упадёт.
+4. `tools/verify_regression_catches_settings_bug.py` — тот же отрицательный
+   контроль вне pytest: `OLD_IMPLEMENTATION=FAIL`,
+   `CURRENT_IMPLEMENTATION=PASS`, `NEGATIVE_CONTROL=OK`.
+
+Итог: **112 + 7 baseline, 0 failures**; отрицательный контроль пройден
+(`reports/tests-at-head.txt`).
+
+Восьмой цикл (проверка исправлений раунда 5) — `reports/chatgpt-cycle8-ask.txt`.

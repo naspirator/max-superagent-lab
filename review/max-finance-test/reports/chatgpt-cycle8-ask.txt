@@ -1,0 +1,16 @@
+Восьмой цикл, только исправление MAJOR из седьмого. PR #38; исправление — коммит cad6262 (diff 423ec13..cad6262), последующие коммиты содержат только отчёты.
+https://github.com/naspirator/max-superagent-lab/pull/38
+
+Что изменено (только тест и инструмент проверки, код режима не менялся):
+1) `tests/test_dispatch_isolation.py`: добавлен `damaged_store_root()` — сценарий начинается со здоровой базы (`recovered=False`, схема полная, это проверяется утверждением), затем включается TEST, удаляется таблица `settings` и маркер `active/1`. Тест `test_dispatcher_blocks_when_meta_survives_but_settings_table_is_lost` переписан на этот сценарий.
+2) Мета-тест `test_old_schema_check_would_let_user_back_into_work`: подменяет `_has_schema()` на реализацию из `ccee903` (она лежит в тесте как `old_has_schema`) и требует обратного — `recovered=False` и доставку всех трёх обновлений в WORK. Если сценарий перестанет воспроизводить дефект, мета-тест упадёт.
+3) `tools/verify_regression_catches_settings_bug.py` — тот же отрицательный контроль вне pytest.
+4) `tools/make_changes_manifest.py` и `reports/changes.diff` пересобраны по текущим файлам без `.pytest_cache`.
+
+Проверь:
+1. Что переписанный тест действительно падает на реализации `_has_schema()` из `ccee903`: подмени метод на `old_has_schema` и запусти тест; ожидается падение.
+2. Что предусловие требует `recovered=False` и полной схемы до повреждения, а маркер `active/1` удалён до `initialize()`.
+3. Что после `initialize()` три обновления (`/sync`, текст, фото) через диспетчер не доходят до WORK.
+4. Прогони 112 + 7 baseline (`reports/tests-at-head.txt`) и отрицательный контроль (`OLD_IMPLEMENTATION=FAIL`, `CURRENT_IMPLEMENTATION=PASS`).
+
+Ответ строго: VERDICT: APPROVE | REVISE | BLOCKED, затем только новые BLOCKER/MAJOR с файлами и строками. Если всё закрыто — APPROVE. Не публикуй review и не меняй PR.
